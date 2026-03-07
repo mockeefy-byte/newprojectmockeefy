@@ -1,0 +1,3 @@
+VITE_API_URL=http://localhost:3000/api
+VITE_GOOGLE_CLIENT_ID=668152410786-lp0bfdv3pb08oa0sfhdemjil1qoeu9k7.apps.googleusercontent.com
+VITE_RAZORPAY_KEY_ID=rzp_live_SKs8h2iyGW3zEa
