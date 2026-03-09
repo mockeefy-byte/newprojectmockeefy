@@ -11,6 +11,12 @@ const skillSchema = new mongoose.Schema({
         ref: 'Category',
         required: true
     },
+    /** Base price (e.g. INR) for a 30-minute session. Used in dynamic pricing: finalPrice = basePrice30 * levelMultiplier * durationMultiplier */
+    basePrice30: {
+        type: Number,
+        min: 0,
+        default: null
+    },
     description: {
         type: String,
         trim: true

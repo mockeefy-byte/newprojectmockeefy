@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { PrimaryButton } from '../pages/ExpertDashboard';
 import { useAuth } from '../context/AuthContext';
 import { Country, State, City } from 'country-state-city';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Lock } from 'lucide-react';
 
 const FormInput = ({ label, value, onChange, placeholder, type = "text", error, maxLength }: any) => (
     <div className="flex flex-col gap-1.5">
@@ -70,6 +70,7 @@ const PersonalInfo = ({ onUpdate, profileData, isMissing }: PersonalInfoProps) =
     const [profile, setProfile] = useState(initialProfile);
     const [loading, setLoading] = useState(true);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
 
     const allCountries = useMemo(() => Country.getAllCountries().map(c => ({
         value: c.isoCode,
@@ -164,6 +165,7 @@ const PersonalInfo = ({ onUpdate, profileData, isMissing }: PersonalInfoProps) =
         if (!p.country) newErrors.country = "Country is required";
         if (!p.state) newErrors.state = "State is required";
         if (!p.city) newErrors.city = "City is required";
+        if (!p.category || !p.category.trim()) newErrors.category = "Expertise category is required (set once, cannot be changed later)";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -178,13 +180,15 @@ const PersonalInfo = ({ onUpdate, profileData, isMissing }: PersonalInfoProps) =
 
         const fetchData = async () => {
             try {
-                // If we have profileData and it has personal info, use it directly?
-                // The parent fetches /api/expert/profile which usually has limited info.
-                // We'll fetch the specific personal info endpoint to be safe.
+                const [personalRes, catRes] = await Promise.all([
+                    axios.get(`/api/expert/personalinfo`),
+                    axios.get(`/api/categories`)
+                ]);
+                const catList = Array.isArray(catRes.data) ? catRes.data : [];
+                setCategories(catList.filter((c: any) => c.name).map((c: any) => ({ _id: c._id, name: c.name })));
 
-                const response = await axios.get(`/api/expert/personalinfo`);
-                if (response.data.success && response.data.data) {
-                    const data = response.data.data;
+                if (personalRes.data.success && personalRes.data.data) {
+                    const data = personalRes.data.data;
                     setProfile({
                         personal: {
                             name: data.userName || user?.name || "",
@@ -200,7 +204,6 @@ const PersonalInfo = ({ onUpdate, profileData, isMissing }: PersonalInfoProps) =
                 } else if (user?.name) {
                     setProfile(prev => ({ ...prev, personal: { ...prev.personal, name: user.name || "" } }));
                 }
-
             } catch (err: any) {
                 console.error("Failed to fetch data:", err);
             } finally {
@@ -336,6 +339,23 @@ const PersonalInfo = ({ onUpdate, profileData, isMissing }: PersonalInfoProps) =
                         error={errors.city}
                     />
 
+                    {/* Category: set once, then disabled */}
+                    <div className="pt-2 border-t border-gray-200 mt-2">
+                        <FormSelect
+                            label="Expertise Category"
+                            value={profile.personal.category}
+                            onChange={(v: string) => setPersonalField("category", v)}
+                            options={categories.map((c) => ({ value: c.name, label: c.name }))}
+                            disabled={!!(profile.personal.category && profile.personal.category.trim())}
+                            placeholder="Choose your category (set once, cannot be changed)"
+                            error={errors.category}
+                        />
+                        {profile.personal.category && profile.personal.category.trim() && (
+                            <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                                <Lock className="w-3.5 h-3.5" /> This category cannot be changed. You can add or remove skills in Dashboard → Skills & Experience.
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
 

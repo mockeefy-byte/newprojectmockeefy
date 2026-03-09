@@ -259,7 +259,7 @@ export const updateSkills = async (req, res) => {
 export const updatePreferences = async (req, res) => {
     try {
         const userId = req.headers.userid;
-        const { jobType, expectedSalary, noticePeriod, willingToRelocate } = req.body;
+        const { experienceLevel, jobType, expectedSalary, noticePeriod, willingToRelocate } = req.body;
 
         if (!userId) {
             return res.status(400).json({ success: false, message: "User ID required" });
@@ -271,10 +271,12 @@ export const updatePreferences = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
+        const isFresher = experienceLevel === "Fresher";
         user.preferences = {
+            experienceLevel: experienceLevel !== undefined ? experienceLevel : user.preferences?.experienceLevel,
             jobType: jobType || user.preferences?.jobType,
-            expectedSalary: expectedSalary || user.preferences?.expectedSalary,
-            noticePeriod: noticePeriod || user.preferences?.noticePeriod,
+            expectedSalary: isFresher ? null : (expectedSalary !== undefined && expectedSalary !== "" ? Number(expectedSalary) : user.preferences?.expectedSalary),
+            noticePeriod: isFresher ? "" : (noticePeriod !== undefined ? noticePeriod : user.preferences?.noticePeriod),
             willingToRelocate: willingToRelocate !== undefined ? willingToRelocate : user.preferences?.willingToRelocate
         };
 
@@ -316,9 +318,12 @@ export const saveProfileImage = async (req, res) => {
         // (Optional) We could delete the old image from Cloudinary here using the public_id
         // For now, we just overwrite the URL in the database
 
-
-        // Save new image URL
-        user.profileImage = getFileUrl(req, req.file);
+        // Get URL: Cloudinary sets secure_url/url on req.file; local storage uses getFileUrl path
+        let imageUrl = getFileUrl(req, req.file);
+        if (!imageUrl && req.file) {
+            imageUrl = req.file.secure_url || req.file.url || (req.file.path && req.file.path.startsWith("http") ? req.file.path : "") || "";
+        }
+        user.profileImage = imageUrl || user.profileImage;
         user.profileCompletion = calculateProfileCompletion(user);
 
         await user.save();
@@ -326,7 +331,7 @@ export const saveProfileImage = async (req, res) => {
         return res.json({
             success: true,
             message: "Profile image uploaded successfully",
-            imageUrl: user.profileImage,
+            imageUrl: user.profileImage || "",
             profileCompletion: user.profileCompletion
         });
     } catch (err) {

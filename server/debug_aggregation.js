@@ -7,7 +7,7 @@ dotenv.config();
 
 const debugAggregation = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI_LOCAL || process.env.MONGO_URI || 'mongodb://localhost:27017/mockdata');
+        await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ MongoDB Connected');
 
         const pipeline = [

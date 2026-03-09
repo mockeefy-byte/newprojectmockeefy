@@ -11,6 +11,7 @@ interface Slot {
 
 interface Availability {
   sessionDuration: number;
+  allowedDurations?: number[];
   maxPerDay: number;
   weekly: Record<string, Slot[]>;
   breakDates: { start: string; end: string }[];
@@ -128,10 +129,14 @@ const ExpertAvailability = () => {
         }
       });
 
+      const allowed = Array.isArray(data.allowedDurations) && data.allowedDurations.length > 0
+        ? data.allowedDurations.filter((d: number) => d === 30 || d === 60)
+        : (data.sessionDuration === 30 || data.sessionDuration === 60 ? [data.sessionDuration] : [30]);
       setProfile((p) => ({
         ...p,
         availability: {
           sessionDuration: data.sessionDuration || 30,
+          allowedDurations: allowed,
           maxPerDay: data.maxPerDay || 4,
           weekly: weekly,
           breakDates: data.breakDates || [],
@@ -282,7 +287,41 @@ const ExpertAvailability = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Duration</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Durations you offer (candidates see only these)</label>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(profile.availability.allowedDurations || [profile.availability.sessionDuration]).includes(30)}
+                        onChange={(e) => {
+                          const current = profile.availability.allowedDurations || [profile.availability.sessionDuration];
+                          const next = e.target.checked ? [...current.filter((d: number) => d !== 30), 30] : current.filter((d: number) => d !== 30);
+                          if (next.length === 0) return;
+                          setProfile(p => ({ ...p, availability: { ...p.availability, allowedDurations: next.sort((a: number, b: number) => a - b) } }));
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">30 min</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(profile.availability.allowedDurations || [profile.availability.sessionDuration]).includes(60)}
+                        onChange={(e) => {
+                          const current = profile.availability.allowedDurations || [profile.availability.sessionDuration];
+                          const next = e.target.checked ? [...current.filter((d: number) => d !== 60), 60] : current.filter((d: number) => d !== 60);
+                          if (next.length === 0) return;
+                          setProfile(p => ({ ...p, availability: { ...p.availability, allowedDurations: next.sort((a: number, b: number) => a - b) } }));
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">60 min</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">At least one must be selected. Candidates will only see the options you enable.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Default slot length (for schedule)</label>
                   <select
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     value={profile.availability.sessionDuration}
@@ -290,8 +329,8 @@ const ExpertAvailability = () => {
                   >
                     <option value={30}>30 Minutes</option>
                     <option value={60}>60 Minutes</option>
-                    <option value={90}>90 Minutes</option>
                   </select>
+                  <p className="text-xs text-gray-400 mt-1">Used when generating time slots below.</p>
                 </div>
 
                 <div>

@@ -8,12 +8,11 @@ import { Button } from "./ui/button";
 
 const BottomNav = () => {
   const [showProfile, setShowProfile] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const { user, logout } = useAuth();
   const location = useLocation();
 
   // Hide bottom nav on authentication pages or if user is not a candidate
-  const authPages = ['/signin', '/signup', '/forgot-password'];
+  const authPages = ['/signin', '/signup', '/forgot-password', '/complete-profile'];
   const shouldShowNav = !authPages.includes(location.pathname);
 
   // If we have a user and they are NOT a candidate (i.e. admin or expert), hide the nav
@@ -100,7 +99,7 @@ const BottomNav = () => {
           {user ? (
             <div className={`w-6 h-6 rounded-full overflow-hidden border ${isActive('/profile') ? 'border-[#004fcb]' : 'border-transparent'}`}>
               <img
-                src={profileImage || getProfileImageUrl(null)}
+                src={getProfileImageUrl(user?.profileImage)}
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
@@ -139,7 +138,7 @@ const BottomNav = () => {
                   {/* User Info Card */}
                   <div className="flex items-center space-x-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border border-gray-200 mb-6">
                     <img
-                      src={profileImage || getProfileImageUrl(null)}
+                      src={getProfileImageUrl(user?.profileImage)}
                       alt={user.name}
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
                       onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}

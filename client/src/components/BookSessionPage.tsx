@@ -81,9 +81,19 @@ const BookSessionPage = () => {
   const [profile, setProfile] = useState<Profile | null>(existingProfile || null);
 
   const sessionPrice = overridePrice ? overridePrice : (profile?.price || 0);
-  // Use Expert's Level & Duration
+  // Skill (for pricing): expert's skills only; duration 30 or 60; level from expert
+  const skillOptions = profile?.skills?.length ? profile.skills : (profile?.category ? [profile.category] : ["General"]);
+  const [selectedSkill, setSelectedSkill] = useState<string>(skillOptions[0] || "General");
   const [expertLevel, setExpertLevel] = useState(existingProfile?.level || "Intermediate");
-  const [sessionDuration, setSessionDuration] = useState<number>(Number(existingProfile?.availability?.sessionDuration) || 30);
+  // Only show durations the expert offers (30 and/or 60)
+  const durationOptions = useMemo(() => {
+    const allowed = profile?.availability?.allowedDurations;
+    if (Array.isArray(allowed) && allowed.length > 0) return allowed.filter((d) => d === 30 || d === 60);
+    const single = profile?.availability?.sessionDuration;
+    if (single === 30 || single === 60) return [single];
+    return [30];
+  }, [profile?.availability?.allowedDurations, profile?.availability?.sessionDuration]);
+  const [sessionDuration, setSessionDuration] = useState<number>(durationOptions[0] ?? 30);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
 
   // LinkedIn-style Profile Header
@@ -101,9 +111,12 @@ const BookSessionPage = () => {
   }, [expertId]);
 
   useEffect(() => {
-    if (profile?.level) {
-      setExpertLevel(profile.level);
-    }
+    if (profile?.level) setExpertLevel(profile.level);
+    const opts = profile?.skills?.length ? profile.skills : (profile?.category ? [profile.category] : ["General"]);
+    if (opts.length && !opts.includes(selectedSkill)) setSelectedSkill(opts[0]);
+    const dur = profile?.availability?.allowedDurations?.length ? profile.availability.allowedDurations : (profile?.availability?.sessionDuration ? [profile.availability.sessionDuration] : [30]);
+    const validDur = dur.filter((d) => d === 30 || d === 60);
+    if (validDur.length && !validDur.includes(sessionDuration)) setSessionDuration(validDur[0]);
   }, [profile]);
   const [loading, setLoading] = useState(!existingProfile || !existingProfile.availability);
   const [errorValue, setErrorValue] = useState<string | null>(null);
@@ -139,33 +152,29 @@ const BookSessionPage = () => {
     }
   }, [expertId]);
 
-  // Dynamic Price Calculation
+  // Dynamic price: skill + expert + duration (only 30 or 60 min; uses expert's level from backend)
   useEffect(() => {
     const fetchPrice = async () => {
-      if (!profile?.category) return;
-
+      if (!profile?.id || !selectedSkill || ![30, 60].includes(sessionDuration)) {
+        setCalculatedPrice(0);
+        return;
+      }
       try {
-        const res = await axios.post("/api/pricing/calculate", {
-          categoryId: profile.category,
-          level: expertLevel,
-          duration: sessionDuration
+        const res = await axios.get("/api/pricing/calculate-price", {
+          params: { skill: selectedSkill, expertId: profile.id, duration: sessionDuration }
         });
-
-        if (res.data.success) {
-          setCalculatedPrice(res.data.price);
+        if (res.data?.finalPrice != null) {
+          setCalculatedPrice(res.data.finalPrice);
+        } else {
+          setCalculatedPrice(0);
         }
       } catch (err) {
         console.error("Pricing fetch failed", err);
-        // Fallback to existing price or 0? 
-        // Better to show specific error or 0 if strict.
         setCalculatedPrice(0);
       }
     };
-
-    if (profile) {
-      fetchPrice();
-    }
-  }, [profile, expertLevel, sessionDuration]);
+    fetchPrice();
+  }, [profile?.id, selectedSkill, sessionDuration]);
 
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -408,14 +417,15 @@ const BookSessionPage = () => {
           expertRole: profile.role,
           date: dates[selectedDate],
           slot: selectedSlot,
-          price: calculatedPrice || sessionPrice, // Prefer calculated
+          price: calculatedPrice || sessionPrice,
           duration: sessionDuration,
           category: profile.category,
-          level: expertLevel // Pass level
+          level: expertLevel,
+          skill: selectedSkill,
+          topics: [selectedSkill]
         }
       }
-    }
-    );
+    });
   };
 
   if (loading) return <BookSessionSkeleton />;
@@ -547,30 +557,39 @@ const BookSessionPage = () => {
       </div>
 
       {/* Level Selector */}
-      {/* Level & Duration Selector */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      {/* Skill (from expert) + Duration (30 or 60) — amount from these only */}
+      <div className="space-y-4 mb-4">
         <div>
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Expert Level</span>
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Skill / Topic</span>
           <select
-            value={expertLevel}
-            onChange={(e) => setExpertLevel(e.target.value)}
+            value={selectedSkill}
+            onChange={(e) => setSelectedSkill(e.target.value)}
             className="w-full text-sm font-bold text-gray-900 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
+            {skillOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
-        <div>
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Duration</span>
-          <select
-            value={sessionDuration}
-            onChange={(e) => setSessionDuration(Number(e.target.value))}
-            className="w-full text-sm font-bold text-gray-900 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            <option value={30}>30 Minutes</option>
-            <option value={60}>60 Minutes</option>
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Expert Level</span>
+            <div className="w-full text-sm font-bold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded-md">
+              {expertLevel}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-0.5">Set by expert</p>
+          </div>
+          <div>
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Duration</span>
+            <select
+              value={durationOptions.includes(sessionDuration) ? sessionDuration : durationOptions[0]}
+              onChange={(e) => setSessionDuration(Number(e.target.value))}
+              className="w-full text-sm font-bold text-gray-900 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {durationOptions.includes(30) && <option value={30}>30 Minutes</option>}
+              {durationOptions.includes(60) && <option value={60}>60 Minutes</option>}
+            </select>
+          </div>
         </div>
       </div>
 

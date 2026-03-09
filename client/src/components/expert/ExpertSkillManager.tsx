@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../../lib/axios';
 import { toast } from 'sonner';
-import { Plus, Save, Award, X, Check } from 'lucide-react';
+import { Plus, Save, Award, X, Check, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Category {
@@ -31,37 +31,58 @@ export default function ExpertSkillManager() {
     const [mySkills, setMySkills] = useState<ExpertSkill[]>([]);
 
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [expertCategoryName, setExpertCategoryName] = useState<string | null>(null); // From profile – read-only
+    const [categoryLocked, setCategoryLocked] = useState(true); // Category cannot be changed once set
     const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [selectedLevel, setSelectedLevel] = useState('Intermediate');
     const [saveLoading, setSaveLoading] = useState(false);
+    const [profileLoading, setProfileLoading] = useState(true);
 
-    // Initial Load
+    // Initial Load: categories + expert profile (for category) + my skills
     useEffect(() => {
-        fetchData();
-        fetchMySkills();
+        const init = async () => {
+            setProfileLoading(true);
+            try {
+                const [catRes, profileRes] = await Promise.all([
+                    axios.get('/api/categories'),
+                    axios.get('/api/expert/profile')
+                ]);
+                setCategories(Array.isArray(catRes.data) ? catRes.data : []);
+
+                const profile = profileRes.data?.profile || {};
+                const skills = profile.expertSkills || [];
+                setMySkills(skills.map((s: any) => ({
+                    skillId: s.skillId?._id || s.skillId,
+                    name: s.skillId?.name || 'Unknown',
+                    level: s.level,
+                    isEnabled: s.isEnabled
+                })));
+
+                const catName = profile.category || '';
+                if (catName) {
+                    setExpertCategoryName(catName);
+                    const cats = Array.isArray(catRes.data) ? catRes.data : [];
+                    const trim = (s: string) => (s || '').trim().toLowerCase();
+                    const match = cats.find((c: Category) => trim(c.name) === trim(catName))
+                        || cats.find((c: Category) => (c.name || '').toLowerCase().includes(catName.trim().toLowerCase()))
+                        || cats.find((c: Category) => catName.trim().toLowerCase().includes((c.name || '').toLowerCase()));
+                    if (match) {
+                        setSelectedCategory(match._id);
+                        const resSkills = await axios.get(`/api/skills/category/${match._id}`);
+                        setAvailableSkills(Array.isArray(resSkills.data) ? resSkills.data : []);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setProfileLoading(false);
+            }
+        };
+        init();
     }, []);
 
-    const fetchData = async () => {
-        try {
-            const res = await axios.get('/api/categories');
-            setCategories(res.data);
-        } catch (e) { console.error(e); }
-    };
-
-    const fetchMySkills = async () => {
-        try {
-            const res = await axios.get('/api/expert/profile');
-            const skills = res.data.profile.expertSkills || [];
-            setMySkills(skills.map((s: any) => ({
-                skillId: s.skillId?._id || s.skillId,
-                name: s.skillId?.name || 'Unknown',
-                level: s.level,
-                isEnabled: s.isEnabled
-            })));
-        } catch (e) { console.error(e); }
-    };
-
     const handleCategoryChange = async (catId: string) => {
+        if (categoryLocked) return; // No-op when category is locked
         setSelectedCategory(catId);
         setSelectedSkills([]);
         if (!catId) { setAvailableSkills([]); return; }
@@ -184,21 +205,43 @@ export default function ExpertSkillManager() {
                         <div className="p-6 border-b border-gray-100 bg-gray-50/50">
                             <h2 className="text-lg font-bold text-gray-900 mb-4">Add New Skills</h2>
 
+                            {/* Category: read-only when set (cannot be changed). Skills & languages can be updated. */}
+                            {profileLoading ? (
+                                <div className="text-sm text-gray-500 mb-4">Loading...</div>
+                            ) : !expertCategoryName ? (
+                                <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                                    <p className="font-medium">Set your category first</p>
+                                    <p className="mt-1 text-amber-700">Go to <strong>Profile → Personal Info</strong> to set your category. Category cannot be changed once set. Then you can add or remove skills and languages here.</p>
+                                </div>
+                            ) : (
+                                <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                                    <Lock className="w-4 h-4 text-gray-400" />
+                                    <span><strong>Your category:</strong> {expertCategoryName} (cannot be changed)</span>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                                {/* 1. Category Selection */}
+                                {/* 1. Category Selection – read-only when expert has category */}
                                 <div className="md:col-span-4 space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Step 1: Select Category</label>
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Step 1: Category</label>
                                     <select
-                                        className="w-full h-11 px-3 bg-white border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-[#004fcb]/20 focus:border-[#004fcb] outline-none transition-all"
+                                        className={`w-full h-11 px-3 rounded-lg text-sm font-medium border outline-none transition-all ${categoryLocked || expertCategoryName
+                                            ? "bg-gray-100 border-gray-200 text-gray-700 cursor-not-allowed"
+                                            : "bg-white border-gray-200 focus:ring-2 focus:ring-[#004fcb]/20 focus:border-[#004fcb]"
+                                            }`}
                                         value={selectedCategory}
                                         onChange={(e) => handleCategoryChange(e.target.value)}
+                                        disabled={!!expertCategoryName}
+                                        title={expertCategoryName ? "Category cannot be changed" : undefined}
                                     >
                                         <option value="">Choose a category...</option>
                                         {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                                     </select>
                                 </div>
 
-                                {/* 2. Level Selection */}
+                                {/* 2. Level Selection – only when category is set */}
+                                {expertCategoryName && (
+                                <>
                                 <div className="md:col-span-4 space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Step 2: Proficiency Level</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -231,10 +274,13 @@ export default function ExpertSkillManager() {
                                         Add {selectedSkills.length > 0 ? `${selectedSkills.length} Skills` : ''}
                                     </button>
                                 </div>
+                                </>
+                                )}
                             </div>
                         </div>
 
-                        {/* Skill Selection Grid */}
+                        {/* Skill Selection Grid – only when category is set */}
+                        {expertCategoryName && (
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-4">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -254,7 +300,7 @@ export default function ExpertSkillManager() {
                                 {!selectedCategory ? (
                                     <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
                                         <Award className="w-8 h-8 mb-2 opacity-50" />
-                                        <p className="text-sm font-medium">Select a category above to view skills</p>
+                                        <p className="text-sm font-medium">Loading skills for your category...</p>
                                     </div>
                                 ) : availableSkills.length === 0 ? (
                                     <div className="h-48 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
@@ -295,6 +341,7 @@ export default function ExpertSkillManager() {
                                 )}
                             </div>
                         </div>
+                        )}
                     </div>
 
                     {/* Selected Skills Preview (The "My Skills" Section) */}

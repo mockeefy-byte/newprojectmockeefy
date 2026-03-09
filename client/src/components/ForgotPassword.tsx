@@ -1,341 +1,287 @@
+import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import axios from "../lib/axios";
+import { AxiosError } from "axios";
+import { toast } from "sonner";
+import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import AuthLayout from "./auth/AuthLayout";
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
-import axios from '../lib/axios';
-import { AxiosError } from 'axios';
-import { toast } from 'sonner';
-import { useNavigate, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { ChevronRight, ArrowLeft, KeyRound, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-
-// --- Zod Schemas ---
-const emailSchema = z.object({
-    email: z.string().email("Please enter a valid email address"),
-});
-
-const otpSchema = z.object({
-    otp: z.string().length(6, "OTP must be exactly 6 digits"),
-});
-
-const passwordSchema = z.object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-});
-
-type EmailFormValues = z.infer<typeof emailSchema>;
-type OtpFormValues = z.infer<typeof otpSchema>;
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+const inputClass =
+  "w-full h-11 px-4 rounded-xl border-2 border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 focus:bg-white outline-none transition-all text-sm";
+const labelClass = "block text-xs font-semibold text-slate-700 mb-1.5";
+const btnPrimary =
+  "w-full h-11 rounded-xl bg-[#004fcb] text-white font-bold text-sm hover:bg-blue-700 focus:ring-2 focus:ring-[#004fcb]/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20";
 
 export default function ForgotPassword() {
-    const [step, setStep] = useState<1 | 2 | 3>(1);
-    const [email, setEmail] = useState("");
-    const [resetToken, setResetToken] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const navigate = useNavigate();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-    // --- Step 1: Send OTP ---
-    const { register: registerEmail, handleSubmit: handleSubmitEmail, formState: { errors: emailErrors } } = useForm<EmailFormValues>({
-        resolver: zodResolver(emailSchema),
-    });
+  const startCountdown = () => {
+    setCountdown(30);
+    const id = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(id);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  };
 
-    const sendOtpMutation = useMutation({
-        mutationFn: async (data: EmailFormValues) => {
-            const response = await axios.post('/api/auth/send-otp', { email: data.email });
-            return response.data;
-        },
-        onSuccess: (_, variables) => {
-            setEmail(variables.email);
-            setStep(2);
-            toast.success("OTP sent to your email!");
-        },
-        onError: (error: AxiosError<{ message: string }>) => {
-            toast.error(error.response?.data?.message || "Failed to send OTP");
-        },
-    });
+  const sendOtpMutation = useMutation({
+    mutationFn: async (emailAddress: string) => {
+      const res = await axios.post("/api/auth/send-otp", { email: emailAddress, type: "reset" });
+      return res.data;
+    },
+    onSuccess: (_, emailAddress) => {
+      setEmail(emailAddress);
+      setStep(2);
+      setError("");
+      startCountdown();
+      toast.success("Code sent to your email");
+    },
+    onError: (err: AxiosError<{ message?: string }>) => {
+      setError(err.response?.data?.message || "Failed to send code");
+    },
+  });
 
-    const onEmailSubmit = (data: EmailFormValues) => {
-        sendOtpMutation.mutate(data);
-    };
+  const verifyOtpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await axios.post("/api/auth/verify-otp", { email, otp });
+      return res.data;
+    },
+    onSuccess: (data: { resetToken?: string }) => {
+      if (data?.resetToken) {
+        setResetToken(data.resetToken);
+        setStep(3);
+        setError("");
+        toast.success("Code verified");
+      } else {
+        setError("Invalid code. Please try again.");
+      }
+    },
+    onError: (err: AxiosError<{ message?: string }>) => {
+      setError(err.response?.data?.message || "Invalid code");
+    },
+  });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async () => {
+      const res = await axios.post("/api/auth/reset-password", {
+        resetToken,
+        newPassword: password,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Password reset! Redirecting to sign in...");
+      setTimeout(() => navigate("/signin"), 1500);
+    },
+    onError: (err: AxiosError<{ message?: string }>) => {
+      setError(err.response?.data?.message || "Failed to reset password");
+    },
+  });
 
-    // --- Step 2: Verify OTP ---
-    const {
-        handleSubmit: handleSubmitOtp,
-        setValue: setOtpValue,
-        watch: watchOtp,
-        formState: { errors: otpErrors }
-    } = useForm<OtpFormValues>({
-        resolver: zodResolver(otpSchema),
-    });
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    sendOtpMutation.mutate(trimmed);
+  };
 
-    const otpValue = watchOtp("otp");
+  const handleOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (otp.length !== 6) {
+      setError("Please enter the 6-digit code");
+      return;
+    }
+    verifyOtpMutation.mutate();
+  };
 
-    const verifyOtpMutation = useMutation({
-        mutationFn: async (data: OtpFormValues) => {
-            const response = await axios.post('/api/auth/verify-otp', {
-                email,
-                otp: data.otp
-            });
-            return response.data; // Expect { message, resetToken }
-        },
-        onSuccess: (data) => {
-            if (data.resetToken) {
-                setResetToken(data.resetToken);
-                setStep(3);
-                toast.success("OTP verified!");
-            } else {
-                toast.error("Verified, but no reset token received. Please try again.");
-            }
-        },
-        onError: (error: AxiosError<{ message: string }>) => {
-            toast.error(error.response?.data?.message || "Invalid OTP");
-        },
-    });
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    resetPasswordMutation.mutate();
+  };
 
-    const onOtpSubmit = (data: OtpFormValues) => {
-        verifyOtpMutation.mutate(data);
-    };
+  const resendOtp = () => {
+    if (countdown > 0) return;
+    setError("");
+    sendOtpMutation.mutate(email);
+  };
 
+  return (
+    <AuthLayout title="Forgot password">
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-6 sm:p-8">
+        <Link
+          to="/signin"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to sign in
+        </Link>
 
-    // --- Step 3: Reset Password ---
-    const { register: registerPassword, handleSubmit: handleSubmitPassword, formState: { errors: passwordErrors } } = useForm<PasswordFormValues>({
-        resolver: zodResolver(passwordSchema),
-    });
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          {step === 1 && "Forgot password?"}
+          {step === 2 && "Enter verification code"}
+          {step === 3 && "Set new password"}
+        </h2>
+        <p className="text-slate-500 text-sm mt-1">
+          {step === 1 && "Enter your email and we'll send you a code to reset your password."}
+          {step === 2 && `We sent a 6-digit code to ${email}. Enter it below.`}
+          {step === 3 && "Create a new secure password for your account."}
+        </p>
 
-    const resetPasswordMutation = useMutation({
-        mutationFn: async (data: PasswordFormValues) => {
-            const response = await axios.post('/api/auth/reset-password', {
-                resetToken,
-                newPassword: data.password
-            });
-            return response.data;
-        },
-        onSuccess: () => {
-            toast.success("Password reset successfully! Redirecting to login...");
-            setTimeout(() => navigate('/signin'), 2000);
-        },
-        onError: (error: AxiosError<{ message: string }>) => {
-            toast.error(error.response?.data?.message || "Failed to reset password");
-        },
-    });
+        {error && (
+          <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+            {error}
+          </div>
+        )}
 
-    const onPasswordSubmit = (data: PasswordFormValues) => {
-        resetPasswordMutation.mutate(data);
-    };
-
-
-    return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 font-sans">
-            <div className="w-full max-w-sm">
-                <Card className="w-full shadow-lg border-none bg-white overflow-hidden">
-                    <CardContent className="p-8">
-
-                        {/* Consolidated Header: Logo + Back Link */}
-                        <div className="flex flex-col items-center justify-center mb-6 space-y-4">
-                            {/* Back to Sign In Link */}
-                            <div className="w-full flex justify-start">
-                                <Link to="/signin" className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">
-                                    <ArrowLeft className="h-4 w-4" /> Back to Sign In
-                                </Link>
-                            </div>
-
-                            {/* Logo matching Navigation */}
-                            <div className="flex items-center justify-center gap-0 relative h-24">
-                                <img
-                                    src="/mockeefy.png"
-                                    alt="Mockeefy"
-                                    className="absolute h-[100px] w-auto object-contain mix-blend-multiply -ml-[140px]"
-                                />
-                                <span className="text-4xl font-bold tracking-tight text-[#004fcb] font-['Outfit'] ml-[40px] animate-fade-in">
-                                    Mockeefy
-                                </span>
-                            </div>
-
-                            <div className="text-center space-y-1">
-                                <h1 className="text-xl font-bold text-gray-900">
-                                    {step === 1 && "Forgot password?"}
-                                    {step === 2 && "Enter verification code"}
-                                    {step === 3 && "Set new password"}
-                                </h1>
-                                <p className="text-gray-500 text-xs">
-                                    {step === 1 && "Enter your email address and we'll send you a code to reset your password."}
-                                    {step === 2 && `We sent a 6-digit code to ${email}. Enter it below.`}
-                                    {step === 3 && "Create a new secure password for your account."}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Error Message Area */}
-                        {sendOtpMutation.error && (
-                            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-md font-medium text-center">
-                                {(sendOtpMutation.error as any)?.response?.data?.message || "Failed to send OTP"}
-                            </div>
-                        )}
-
-                        {verifyOtpMutation.error && (
-                            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-md font-medium text-center">
-                                {(verifyOtpMutation.error as any)?.response?.data?.message || "Failed to verify OTP"}
-                            </div>
-                        )}
-
-                        {resetPasswordMutation.error && (
-                            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-md font-medium text-center">
-                                {(resetPasswordMutation.error as any)?.response?.data?.message || "Failed to reset password"}
-                            </div>
-                        )}
-
-                        {step === 1 && (
-                            <form onSubmit={handleSubmitEmail(onEmailSubmit)} className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="email" className="text-xs font-semibold text-gray-700">
-                                        Email Address
-                                    </Label>
-                                    <Input
-                                        id="email"
-
-                                        type="email"
-                                        autoComplete="username"
-                                        placeholder="name@company.com"
-                                        className="w-full h-10 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
-                                        {...registerEmail("email")}
-                                        disabled={sendOtpMutation.isPending}
-                                    />
-                                    {emailErrors.email && <p className="text-sm text-red-500">{emailErrors.email.message}</p>}
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm hover:shadow transition-all text-sm mt-2"
-                                    disabled={sendOtpMutation.isPending}
-                                >
-                                    {sendOtpMutation.isPending ? "Sending..." : "Send Code"}
-                                </Button>
-                            </form>
-                        )}
-
-                        {step === 2 && (
-                            <form onSubmit={handleSubmitOtp(onOtpSubmit)} className="space-y-6">
-                                <div className="space-y-2 flex flex-col items-center justify-center">
-                                    <Label htmlFor="otp" className="text-xs font-semibold text-gray-700">
-                                        Verification Code
-                                    </Label>
-                                    <InputOTP
-                                        maxLength={6}
-                                        value={otpValue}
-                                        onChange={(val) => setOtpValue("otp", val)}
-                                        disabled={verifyOtpMutation.isPending}
-                                    >
-                                        <InputOTPGroup>
-                                            <InputOTPSlot index={0} />
-                                            <InputOTPSlot index={1} />
-                                            <InputOTPSlot index={2} />
-                                            <InputOTPSlot index={3} />
-                                            <InputOTPSlot index={4} />
-                                            <InputOTPSlot index={5} />
-                                        </InputOTPGroup>
-                                    </InputOTP>
-                                    {otpErrors.otp && <p className="text-sm text-red-500">{otpErrors.otp.message}</p>}
-                                </div>
-                                <div className="text-center text-sm">
-                                    <span className="text-gray-500">Didn't receive code? </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => sendOtpMutation.mutate({ email })}
-                                        className="text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
-                                        disabled={sendOtpMutation.isPending}
-                                    >
-                                        Resend
-                                    </button>
-                                </div>
-                                <Button
-                                    type="submit"
-                                    className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm hover:shadow transition-all text-sm"
-                                    disabled={verifyOtpMutation.isPending}
-                                >
-                                    {verifyOtpMutation.isPending ? "Verifying..." : "Verify Code"}
-                                </Button>
-                            </form>
-                        )}
-
-                        {step === 3 && (
-                            <form onSubmit={handleSubmitPassword(onPasswordSubmit)} className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="password" className="text-xs font-semibold text-gray-700">
-                                        New Password
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="password"
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            className="w-full h-10 border-gray-300 rounded-md shadow-sm pr-10 focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
-                                            {...registerPassword("password")}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="h-4 w-4" />
-                                            ) : (
-                                                <Eye className="h-4 w-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                    {passwordErrors.password && <p className="text-sm text-red-500">{passwordErrors.password.message}</p>}
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="confirmPassword" className="text-xs font-semibold text-gray-700">
-                                        Confirm Password
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="confirmPassword"
-                                            type={showConfirmPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            className="w-full h-10 border-gray-300 rounded-md shadow-sm pr-10 focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
-                                            {...registerPassword("confirmPassword")}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                        >
-                                            {showConfirmPassword ? (
-                                                <EyeOff className="h-4 w-4" />
-                                            ) : (
-                                                <Eye className="h-4 w-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                    {passwordErrors.confirmPassword && <p className="text-sm text-red-500">{passwordErrors.confirmPassword.message}</p>}
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm hover:shadow transition-all text-sm mt-2"
-                                    disabled={resetPasswordMutation.isPending}
-                                >
-                                    {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
-                                </Button>
-                            </form>
-                        )}
-                    </CardContent>
-                </Card>
+        {step === 1 && (
+          <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="email" className={labelClass}>
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+                disabled={sendOtpMutation.isPending}
+              />
             </div>
-        </div>
-    );
+            <button type="submit" disabled={sendOtpMutation.isPending} className={btnPrimary}>
+              {sendOtpMutation.isPending ? "Sending..." : "Send code"}
+            </button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleOtpSubmit} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="otp" className={`${labelClass} text-center block`}>
+                Verification code
+              </label>
+              <input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className={`${inputClass} text-center text-lg tracking-[0.4em]`}
+              />
+              <div className="flex justify-between items-center mt-2 px-1">
+                <span className="text-xs text-slate-400">Didn't receive it?</span>
+                <button
+                  type="button"
+                  onClick={resendOtp}
+                  disabled={countdown > 0 || sendOtpMutation.isPending}
+                  className="text-xs font-semibold text-[#004fcb] hover:text-blue-700 disabled:text-slate-400"
+                >
+                  {countdown > 0 ? `Resend in ${countdown}s` : "Resend code"}
+                </button>
+              </div>
+            </div>
+            <button type="submit" disabled={verifyOtpMutation.isPending || otp.length !== 6} className={btnPrimary}>
+              {verifyOtpMutation.isPending ? "Verifying..." : "Verify code"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setStep(1); setError(""); setOtp(""); }}
+              className="w-full text-sm text-slate-500 hover:text-slate-700 font-medium"
+            >
+              ← Use a different email
+            </button>
+          </form>
+        )}
+
+        {step === 3 && (
+          <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="password" className={labelClass}>
+                New password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${inputClass} pr-11`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className={labelClass}>
+                Confirm password
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Repeat password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={`${inputClass} pr-11`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <button type="submit" disabled={resetPasswordMutation.isPending} className={btnPrimary}>
+              {resetPasswordMutation.isPending ? "Resetting..." : "Reset password"}
+            </button>
+          </form>
+        )}
+
+        <p className="text-center text-sm text-slate-500 mt-6">
+          <Link to="/signin" className="font-semibold text-[#004fcb] hover:text-blue-700 hover:underline">
+            Back to sign in
+          </Link>
+        </p>
+      </div>
+    </AuthLayout>
+  );
 }

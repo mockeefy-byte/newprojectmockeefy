@@ -161,7 +161,7 @@ export default function SavedExpertsSection() {
                             <div className="mt-auto pt-2">
                                 <button
                                     onClick={() => navigate(`/book-session`, { state: { expertId: expert._id } })}
-                                    className="w-full py-2.5 bg-gray-900 hover:bg-[#004fcb] text-white text-sm font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                                    className="w-full py-2.5 bg-[#004fcb] hover:bg-blue-600 text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
                                 >
                                     Book Session
                                 </button>

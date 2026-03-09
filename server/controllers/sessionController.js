@@ -2,11 +2,12 @@ import * as sessionService from '../services/sessionService.js';
 import * as meetingService from '../services/meetingService.js';
 import PricingRule from '../models/PricingRule.js';
 import ExpertDetails from '../models/expertModel.js';
+import * as priceCalculationService from '../services/priceCalculationService.js';
 import { v4 as uuidv4 } from 'uuid'; // Ensure you have uuid or use crypto
 
 export const createSession = async (req, res) => {
     try {
-        const { expertId, candidateId, userId, startTime, endTime, topics, level, status } = req.body;
+        const { expertId, candidateId, userId, startTime, endTime, topics, level, status, skill } = req.body;
 
         // Use provided ID or generate one
         const sessionId = req.body.sessionId || `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -14,7 +15,7 @@ export const createSession = async (req, res) => {
         // Calculate Duration
         const start = new Date(startTime);
         const end = new Date(endTime);
-        const durationMinutes = (end - start) / (1000 * 60);
+        const durationMinutes = Math.round((end - start) / (1000 * 60));
 
         // Fetch Expert to get Category
         let expert = await ExpertDetails.findOne({ $or: [{ _id: expertId }, { userId: expertId }] });
@@ -25,34 +26,36 @@ export const createSession = async (req, res) => {
         // --- STRICT PRICING ENFORCEMENT ---
         let finalPrice = 0;
 
-        const categoryName = expert.personalInformation?.category || "IT";
-        // Use Expert's defined level (or override from request if allowed? User said "Expert has no control", usually means Expert sets their level, Admin sets price for Level.
-        // Assuming we use the Expert's level from profile usually, OR the level requested in booking?
-        // Task says "When a user selects duration... fetch correct price".
-        // Usually booking is for a specific level usage. Let's use request level if present, else expert level.
-        const selectedLevel = level || expert.professionalDetails?.level || "Intermediate";
-
-        const Category = (await import('../models/Category.js')).default;
-        const catDoc = await Category.findOne({ name: categoryName });
-
-        if (!catDoc) {
-            return res.status(400).json({ success: false, message: `Category '${categoryName}' not configured in system.` });
+        // 1) Dynamic pricing: skill + expert + duration (30 or 60) → basePrice30 * levelMultiplier * durationMultiplier
+        if (skill && [30, 60].includes(durationMinutes)) {
+            const result = await priceCalculationService.calculateBookingPrice(skill, expertId, durationMinutes);
+            if (!result.error) finalPrice = result.finalPrice;
         }
 
-        // Resolve Price
-        const pricingRule = await PricingRule.findOne({
-            categoryId: catDoc._id,
-            skillId: null, // Base price by default. (Improvement: match topic to skillId later)
-            level: selectedLevel,
-            duration: Number(durationMinutes)
-        });
+        // 2) Fallback: legacy PricingRule by category + level + duration
+        if (finalPrice === 0) {
+            const categoryName = expert.personalInformation?.category || "IT";
+            const selectedLevel = level || expert.professionalDetails?.level || "Intermediate";
 
-        if (!pricingRule) {
-            // CRITICAL: Fail if no price set. Do not allow 0 Unless intended.
-            return res.status(400).json({ success: false, message: `Pricing not configured for ${categoryName} - ${selectedLevel} - ${durationMinutes}mins.` });
+            const Category = (await import('../models/Category.js')).default;
+            const catDoc = await Category.findOne({ name: categoryName });
+
+            if (!catDoc) {
+                return res.status(400).json({ success: false, message: `Category '${categoryName}' not configured in system.` });
+            }
+
+            const pricingRule = await PricingRule.findOne({
+                categoryId: catDoc._id,
+                skillId: null,
+                level: selectedLevel,
+                duration: Number(durationMinutes)
+            });
+
+            if (!pricingRule) {
+                return res.status(400).json({ success: false, message: `Pricing not configured for ${categoryName} - ${selectedLevel} - ${durationMinutes}mins.` });
+            }
+            finalPrice = pricingRule.price;
         }
-
-        finalPrice = pricingRule.price;
         // ----------------------------------
 
         const sessionData = {

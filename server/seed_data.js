@@ -14,7 +14,11 @@ import Session from './models/Session.js';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/interviewmock";
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+    console.error("MONGO_URI is required in .env (mockeefy Atlas connection)");
+    process.exit(1);
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                SEED CONFIG                                 */

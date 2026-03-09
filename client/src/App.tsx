@@ -87,9 +87,9 @@ function AppRoutes() {
         {/* Root: If logged in -> Dashboard. Else -> Landing Page */}
         <Route path="/" element={
           user ? (
-            user.userType === "expert" ? <Navigate to="/dashboard" replace /> :
-              user.userType === "admin" ? <Navigate to="/admin" replace /> :
-                <Index /> /* Fallback for unknown role, or show landing? Usually redirect */
+            (user.userType?.toLowerCase() === "expert") ? <Navigate to="/dashboard" replace /> :
+              (user.userType?.toLowerCase() === "admin") ? <Navigate to="/admin" replace /> :
+                <Index /> /* Fallback for candidate/user: show landing */
           ) : (
             <Index />
           )

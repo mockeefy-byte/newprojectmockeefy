@@ -10,7 +10,7 @@ interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
-/** Show left sidebar only on Overview ("/"). On Sessions and other pages, hide it so main content expands. */
+/** Show left sidebar only on Overview (/). On Sessions and Profile, hide it so only main content (experts, profile, sessions) shows. */
 const SHOW_LEFT_SIDEBAR_PATHS = ["/"];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
@@ -31,7 +31,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-5 pt-2 sm:pt-3 pb-4 sm:pb-6 transition-all duration-300">
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-stretch w-full">
 
-                    {/* Left Sidebar - only on Overview (/) ; hidden on Sessions and other pages so content expands */}
+                    {/* Left Sidebar - only on Overview (/) ; on Sessions/Profile only main content (experts etc.) shows */}
                     {showLeftSidebar && (
                         <aside className="hidden lg:block w-[240px] shrink-0 space-y-4 sticky top-16 self-start">
                             {showSkeletons ? <SkeletonSidebar /> : <Sidebar />}

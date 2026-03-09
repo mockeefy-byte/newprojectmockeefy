@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   User,
+  UserCircle,
   Calendar,
   Video,
   Briefcase,
@@ -93,7 +94,7 @@ const Sidebar = () => {
                 />
               </svg>
               <img
-                src={getProfileImageUrl(displayProfile.profileImage)}
+                src={getProfileImageUrl(user?.profileImage ?? displayProfile.profileImage)}
                 alt={displayProfile.name}
                 className="w-8 h-8 rounded-full object-cover border-2 border-white absolute bg-slate-50"
                 onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
@@ -113,9 +114,10 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* CARD 2: NAVIGATION */}
+      {/* CARD 2: NAVIGATION — correct process: Overview → Profile → Sessions → Career → Saved → Certificates */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-sm space-y-1">
         <NavItem icon={User} label="Overview" path="/" active={location.pathname === "/" || location.pathname === "/dashboard"} />
+        <NavItem icon={UserCircle} label="Profile" path="/profile" active={location.pathname === "/profile"} />
         <NavItem icon={Calendar} label="Sessions" path="/my-sessions" active={location.pathname === "/my-sessions" && (!location.search || !location.search.includes('view='))} />
         <NavItem icon={Briefcase} label="Career Hub" path="/my-sessions?view=jobs" active={location.pathname === "/my-sessions" && location.search.includes('view=jobs')} />
         <NavItem icon={Bookmark} label="Saved Experts" path="/my-sessions?view=saved" active={location.pathname === "/my-sessions" && location.search.includes('view=saved')} />

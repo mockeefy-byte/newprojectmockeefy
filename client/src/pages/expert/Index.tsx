@@ -121,7 +121,7 @@ export default function DashboardIndex() {
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex flex-col overflow-hidden font-['Inter']">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex flex-col overflow-hidden font-sans">
 
       {/* Fixed Header Section */}
       <div className="p-6 border-b border-gray-100 bg-white shrink-0">
@@ -169,11 +169,15 @@ export default function DashboardIndex() {
             <SummaryCard
               title="Total Earnings"
               value={`₹${stats.revenue.toLocaleString()}`}
-              sub="Paid monthly"
+              sub="From completed sessions · Based on your skills & level"
               colorClass="text-green-600 bg-green-50"
               icon={<DollarSign size={24} />}
             />
           </div>
+
+          <p className="text-xs text-gray-500 max-w-2xl">
+            <strong>How you earn:</strong> The amount shown is the sum of completed session payouts. Each session’s price is calculated from the <strong>skill</strong> (base price), your <strong>expertise level</strong>, and <strong>duration</strong> (30 or 60 min). You can update your skills in Dashboard → Skills & Experience; category is fixed once set.
+          </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 

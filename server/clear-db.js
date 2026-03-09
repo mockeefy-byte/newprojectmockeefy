@@ -1,4 +1,9 @@
-
+/**
+ * Clear entire mockeefy database: all users and all data.
+ * Uses MONGO_URI from .env (must point to mockeefy DB).
+ *
+ * Run: node clear-db.js
+ */
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import User from "./models/User.js";
@@ -6,8 +11,15 @@ import ExpertDetails from "./models/expertModel.js";
 import Category from "./models/Category.js";
 import Session from "./models/Session.js";
 import Review from "./models/reviewModel.js";
+import Skill from "./models/Skill.js";
+import PricingRule from "./models/PricingRule.js";
+import SavedExpert from "./models/SavedExpert.js";
+import Notification from "./models/Notification.js";
+import Otp from "./models/Otp.js";
+import Meeting from "./models/Meeting.js";
+import Report from "./models/Report.js";
+import AiSession from "./models/AiSession.js";
 
-// Load env vars
 dotenv.config();
 
 const clearDatabase = async () => {
@@ -18,38 +30,34 @@ const clearDatabase = async () => {
         }
 
         await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to MongoDB...");
+        console.log("Connected to MongoDB (mockeefy)...");
 
-        // 1. Clear Categories (All)
-        await Category.deleteMany({});
-        console.log("Deleted all Categories.");
+        const models = [
+            [Session, "Sessions"],
+            [Meeting, "Meetings"],
+            [Report, "Reports"],
+            [Review, "Reviews"],
+            [AiSession, "AiSessions"],
+            [SavedExpert, "SavedExperts"],
+            [Notification, "Notifications"],
+            [ExpertDetails, "ExpertDetails"],
+            [PricingRule, "PricingRules"],
+            [Category, "Categories"],
+            [Skill, "Skills"],
+            [Otp, "Otps"],
+            [User, "Users"],
+        ];
 
-        // 2. Clear Sessions (All)
-        // Check if session model works (if imported correctly)
-        // If Session model isn't exported as default, we might have issues, but assuming standard export.
-        try {
-            await Session.deleteMany({});
-            console.log("Deleted all Sessions.");
-        } catch (e) {
-            console.log("Error deleting sessions (might be empty or model issue):", e.message);
+        for (const [Model, name] of models) {
+            try {
+                const result = await Model.deleteMany({});
+                console.log(`Deleted ${result.deletedCount} ${name}.`);
+            } catch (e) {
+                console.log(`Error clearing ${name}:`, e.message);
+            }
         }
 
-        // 3. Clear Expert Details (All - they are linked to users usually)
-        await ExpertDetails.deleteMany({});
-        console.log("Deleted all Expert Profiles.");
-
-        // 4. Clear Reviews (All)
-        try {
-            await Review.deleteMany({});
-            console.log("Deleted all Reviews.");
-        } catch (e) { console.log("Error deleting reviews:", e.message); }
-
-        // 5. Clear Users (EXCEPT Admin)
-        // We want to keep userType === 'admin'
-        const result = await User.deleteMany({ userType: { $ne: 'admin' } });
-        console.log(`Deleted ${result.deletedCount} Users (kept admins).`);
-
-        console.log("Database cleared successfully!");
+        console.log("Database cleared successfully.");
         process.exit(0);
     } catch (error) {
         console.error("Error clearing database:", error);

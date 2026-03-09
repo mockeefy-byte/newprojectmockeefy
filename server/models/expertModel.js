@@ -44,6 +44,9 @@ const experienceSchema = new mongoose.Schema({
 /* ----------------- Availability Schema ------------------ */
 const availabilitySchema = new mongoose.Schema({
   sessionDuration: { type: Number, default: 30 },
+  /** Durations (in minutes) this expert offers. e.g. [30], [60], or [30, 60]. If empty/absent, use [sessionDuration]. */
+  allowedDurations: { type: [Number], default: undefined },
+
   maxPerDay: { type: Number, default: 1, min: 1 },
 
   weekly: {
@@ -83,8 +86,8 @@ const expertSchema = new mongoose.Schema(
       // though ideally it fits in Expert Details proper. Keeping it here for now as requested.
       category: {
         type: String,
-        enum: ["IT", "HR", "Business", "Design", "Marketing", "Finance", "AI", "IT & Software", "Non-IT Corporate", "Medical", "Legal", "Creative"],
         trim: true
+        // Must match a name from the Category collection (validated in controller)
       }
     },
 

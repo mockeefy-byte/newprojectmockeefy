@@ -97,9 +97,12 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       return normalizedUser;
     } catch (error: any) {
       console.error('Failed to fetch profile', error);
-      // Only logout if 401 specifically, otherwise it might be a network error
-      if (error.response && error.response.status === 401) {
-        logout();
+      // 401 = no token, 403 = invalid/expired token → clear session so user can sign in again
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('token');
+        setUser(null);
+        setToken(null);
       }
       return null;
     } finally {
@@ -117,12 +120,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       localStorage.setItem('token', accessToken);
       setToken(accessToken);
 
-      // Normalize userId to id for consistency
+      // Normalize userId to id for consistency; keep profileImage so navbar/sidebar show it
       const normalizedUser: User = {
         ...userData,
         id: userData.userId || userData.id,
         phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
         role: userData.userType || (userData as any).role,
+        profileImage: (userData as any).profileImage ?? userData.profileImage,
       };
 
       setUser(normalizedUser);
@@ -143,12 +147,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         localStorage.setItem('token', accessToken);
         setToken(accessToken);
 
-        // Normalize userId to id for consistency
+        // Normalize userId to id for consistency; keep profileImage for navbar/sidebar
         const normalizedUser: User = {
           ...userData,
           id: userData.userId || userData.id,
           phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
           role: userData.userType || (userData as any).role,
+          profileImage: (userData as any).profileImage ?? userData.profileImage,
         };
 
         setUser(normalizedUser);
@@ -171,12 +176,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         localStorage.setItem('token', accessToken);
         setToken(accessToken);
 
-        // Normalize userId to id for consistency
+        // Normalize userId to id for consistency; keep profileImage for navbar/sidebar
         const normalizedUser: User = {
           ...userData,
           id: userData.userId || userData.id,
           phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
           role: userData.userType || (userData as any).role,
+          profileImage: (userData as any).profileImage ?? userData.profileImage,
         };
 
         setUser(normalizedUser);

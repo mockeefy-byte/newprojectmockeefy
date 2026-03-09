@@ -395,9 +395,76 @@ export const getProfile = async (req, res) => {
 /* -------------------- OTP SYSTEM -------------------- */
 import { sendEmail } from "../services/emailService.js";
 
+/** Professional OTP email HTML template (registration or password reset) */
+function getOtpEmailHtml({ otp, type }) {
+  const isReset = type === "reset";
+  const title = isReset ? "Reset your password" : "Verify your email";
+  const greeting = isReset
+    ? "You requested a password reset for your Mockeefy account."
+    : "You're one step away from creating your Mockeefy account.";
+  const cta = isReset ? "Use the code below to set a new password." : "Use the code below to verify your email and continue.";
+  const brandColor = "#004fcb";
+  const bgLight = "#f8fafc";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} – Mockeefy</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, ${brandColor} 0%, #1e40af 100%); padding: 28px 32px; text-align: center;">
+              <span style="font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.02em;">Mockeefy</span>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500;">${title}</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #334155;">Hello,</p>
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">${greeting} ${cta}</p>
+              <!-- OTP Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px 0;">
+                    <div style="display: inline-block; background-color: ${bgLight}; border: 2px solid #e2e8f0; border-radius: 10px; padding: 18px 28px;">
+                      <span style="font-size: 28px; font-weight: 700; letter-spacing: 8px; color: ${brandColor}; font-variant-numeric: tabular-nums;">${otp}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">This code is valid for <strong>5 minutes</strong>. Do not share it with anyone.</p>
+              <p style="margin: 0 0 24px 0; font-size: 13px; color: #64748b;">If you didn't request this, you can safely ignore this email.</p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0 0 20px 0;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">Best regards,<br><strong style="color: #334155;">The Mockeefy Team</strong></p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 16px 32px; background-color: ${bgLight}; text-align: center;">
+              <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${new Date().getFullYear()} Mockeefy. Your first interview shouldn't be the real one.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
 // Send OTP
 export const sendOtp = async (req, res) => {
-  const { email, type } = req.body; // type can be 'register' or 'reset'
+  const { email, type = 'register' } = req.body; // type: 'register' | 'reset'
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
@@ -424,19 +491,12 @@ export const sendOtp = async (req, res) => {
       expires: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
     });
 
-    // Send Email
-    const subject = type === 'register' ? "Mockeefy Registration OTP" : "Mockeefy Password Reset OTP";
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #2563eb;">${subject}</h2>
-        <p>Your OTP is:</p>
-        <h1 style="background: #f3f4f6; padding: 10px; display: inline-block; letter-spacing: 5px;">${otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-        <p>If you did not request this, please ignore this email.</p>
-        <br>
-        <p>Best regards,<br>Mockeefy Team</p>
-      </div>
-    `;
+    // Send Email with professional template
+    const isReset = type === "reset";
+    const subject = isReset
+      ? "Reset your password – Your verification code"
+      : "Verify your email – Your verification code";
+    const html = getOtpEmailHtml({ otp, type });
 
     await sendEmail({ to: email, subject, html });
 

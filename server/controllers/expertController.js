@@ -478,16 +478,28 @@ export const getPersonalInfo = async (req, res) => {
     if (!userIdRaw) return res.status(401).json({ success: false, message: "Unauthorized: user id missing" });
 
     const queryUserId = toObjectId(userIdRaw);
-    const expert = await ExpertDetails.findOne({ userId: queryUserId });
+    const [user, expert] = await Promise.all([
+      User.findById(queryUserId).lean(),
+      ExpertDetails.findOne({ userId: queryUserId }).lean()
+    ]);
 
-    if (expert) {
-      return res.status(200).json({ success: true, data: expert.personalInformation });
-    } else {
-      return res.status(200).json({
-        success: true,
-        data: { userName: "", mobile: "", gender: "", dob: "", country: "", state: "", city: "" }
-      });
-    }
+    // Personal info: name, phone, gender, dob, country, state, city live on User; category on ExpertDetails
+    const data = {
+      userName: user?.name ?? "",
+      mobile: user?.personalInfo?.phone ?? "",
+      gender: user?.personalInfo?.gender ?? "",
+      dob: user?.personalInfo?.dateOfBirth
+        ? (typeof user.personalInfo.dateOfBirth === "string"
+          ? user.personalInfo.dateOfBirth
+          : new Date(user.personalInfo.dateOfBirth).toISOString().split("T")[0])
+        : "",
+      country: user?.personalInfo?.country ?? "",
+      state: user?.personalInfo?.state ?? "",
+      city: user?.personalInfo?.city ?? "",
+      category: expert?.personalInformation?.category ?? ""
+    };
+
+    return res.status(200).json({ success: true, data });
   } catch (err) {
     console.error("getPersonalInfo error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -528,21 +540,22 @@ export const updatePersonalInfo = async (req, res) => {
       expert = new ExpertDetails({ userId: queryUserId });
     }
 
-    if (category) {
+    if (category !== undefined && category !== null && category !== "") {
       const existingCat = expert.personalInformation?.category;
 
       // Strict check: Cannot change category once set
-      if (existingCat && existingCat !== category) {
+      if (existingCat && existingCat.trim() !== "" && existingCat !== category) {
         return res.status(400).json({ success: false, message: "Category has already been set and cannot be changed" });
       }
 
-      // Validate category
-      const allowedCategories = ["IT", "HR", "Business", "Design", "Marketing", "Finance", "AI", "IT & Software", "Non-IT Corporate", "Medical", "Legal", "Creative"];
-      if (allowedCategories.includes(category)) {
-        if (!expert.personalInformation) expert.personalInformation = {};
-        expert.personalInformation.category = category;
-        await expert.save();
+      // Validate: must be an existing category name from Category collection
+      const catDoc = await Category.findOne({ name: category.trim() });
+      if (!catDoc) {
+        return res.status(400).json({ success: false, message: "Please select a valid category from the list" });
       }
+      if (!expert.personalInformation) expert.personalInformation = {};
+      expert.personalInformation.category = catDoc.name;
+      await expert.save();
     }
 
     // Construct response object (Mocking the structure frontend expects)
@@ -883,6 +896,12 @@ export const updateAvailability = async (req, res) => {
 
     expert.availability.sessionDuration = newAvailability.sessionDuration ?? expert.availability.sessionDuration;
     expert.availability.maxPerDay = newAvailability.maxPerDay ?? expert.availability.maxPerDay;
+    if (Array.isArray(newAvailability.allowedDurations)) {
+      expert.availability.allowedDurations = newAvailability.allowedDurations.filter((d) => d === 30 || d === 60);
+      if (expert.availability.allowedDurations.length === 0) expert.availability.allowedDurations = [expert.availability.sessionDuration];
+    } else if (newAvailability.allowedDurations !== undefined) {
+      expert.availability.allowedDurations = undefined;
+    }
     // ensure weekly is a plain object
     expert.availability.weekly = newAvailability.weekly ?? expert.availability.weekly ?? {};
     expert.availability.breakDates = newAvailability.breakDates ?? expert.availability.breakDates ?? [];
@@ -1012,6 +1031,7 @@ export const getPendingExperts = async (req, res) => {
         },
         availability: {
           sessionDuration: expert.availability?.sessionDuration || 30,
+          allowedDurations: (expert.availability?.allowedDurations?.length ? expert.availability.allowedDurations : null) || [expert.availability?.sessionDuration || 30],
           maxPerDay: expert.availability?.maxPerDay || 1,
           weekly: expert.availability?.weekly || {},
           breakDates: expert.availability?.breakDates || []
@@ -1093,6 +1113,7 @@ export const getRejectedExperts = async (req, res) => {
         },
         availability: {
           sessionDuration: expert.availability?.sessionDuration || 30,
+          allowedDurations: (expert.availability?.allowedDurations?.length ? expert.availability.allowedDurations : null) || [expert.availability?.sessionDuration || 30],
           maxPerDay: expert.availability?.maxPerDay || 1,
           weekly: expert.availability?.weekly || {},
           breakDates: expert.availability?.breakDates || []
@@ -1211,6 +1232,7 @@ export const getVerifiedExperts = async (req, res) => {
         })) : [],
         availability: {
           sessionDuration: expert.availability?.sessionDuration || 30,
+          allowedDurations: (expert.availability?.allowedDurations?.length ? expert.availability.allowedDurations : null) || [expert.availability?.sessionDuration || 30],
           maxPerDay: expert.availability?.maxPerDay || 1,
           weekly: expert.availability?.weekly || {},
           breakDates: expert.availability?.breakDates || []

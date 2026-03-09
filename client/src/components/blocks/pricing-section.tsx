@@ -131,7 +131,7 @@ export function PricingSection({
                   "w-full font-semibold",
                   tier.popular || tier.highlighted
                     ? "bg-[#004fcb] hover:bg-blue-600 text-white"
-                    : "bg-slate-900 hover:bg-slate-800 text-white"
+                    : "bg-[#004fcb] hover:bg-blue-600 text-white"
                 )}
               >
                 <Link to={tier.cta === "Contact Us" ? "/plans" : "/signup"}>

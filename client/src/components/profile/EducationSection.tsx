@@ -71,12 +71,12 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-lg font-bold text-gray-900">Education</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">Your academic background</p>
+                    <h2 className="text-lg font-bold text-elite-black tracking-tight">Education</h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Your academic background</p>
                 </div>
                 <button
                     onClick={addEducation}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors text-xs font-bold"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors text-[11px] font-bold"
                 >
                     <Plus className="w-3.5 h-3.5" />
                     Add
@@ -84,12 +84,12 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
             </div>
 
             {education.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-100 bg-gray-50/50 rounded-xl">
-                    <GraduationCap className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">No education added</p>
+                <div className="text-center py-8 border-2 border-dashed border-slate-100 bg-slate-50/50 rounded-xl">
+                    <GraduationCap className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <p className="text-slate-500 text-[11px]">No education added</p>
                     <button
                         onClick={addEducation}
-                        className="mt-2 text-[#004fcb] text-xs font-bold hover:underline"
+                        className="mt-2 text-[#004fcb] text-[11px] font-bold hover:underline"
                     >
                         Add now
                     </button>
@@ -97,7 +97,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {education.map((edu, index) => (
-                        <div key={index} className="border border-gray-100 bg-white rounded-xl p-4 relative shadow-sm hover:shadow-md transition-all group">
+                        <div key={index} className="border border-slate-200/80 bg-white rounded-xl p-4 relative shadow-sm hover:shadow-md transition-all group">
                             <button
                                 onClick={() => removeEducation(index)}
                                 className="absolute top-3 right-3 p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
@@ -107,7 +107,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
 
                             <div className="space-y-3">
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Degree</label>
+                                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Degree</label>
                                     <input
                                         type="text"
                                         value={edu.degree}
@@ -118,7 +118,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Institution</label>
+                                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Institution</label>
                                     <input
                                         type="text"
                                         value={edu.institution}
@@ -130,7 +130,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Start</label>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Start</label>
                                         <input
                                             type="number"
                                             value={edu.startYear}
@@ -141,7 +141,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">End</label>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">End</label>
                                         <input
                                             type="number"
                                             value={edu.endYear || ""}
@@ -170,11 +170,11 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                 </div>
             )}
 
-            <div className="flex justify-end pt-4 border-t border-gray-100">
+            <div className="flex justify-end pt-4 border-t border-slate-100">
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors disabled:opacity-50 text-xs font-bold shadow-sm"
+                    className="flex items-center gap-2 px-5 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" />
                     {saving ? "Saving..." : "Save Changes"}

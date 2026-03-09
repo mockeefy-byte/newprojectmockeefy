@@ -22,11 +22,13 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ allowedRoles }) 
         return <Navigate to="/signin" replace />;
     }
 
-    if (!allowedRoles.includes(user.userType)) {
+    const role = user.userType?.toLowerCase();
+    const allowed = allowedRoles.map((r) => r.toLowerCase());
+    if (!role || !allowed.includes(role)) {
         // Redirect to their appropriate dashboard if they try to access a route for another role
-        if (user.userType === 'expert') {
+        if (role === 'expert') {
             return <Navigate to="/dashboard" replace />;
-        } else if (user.userType === 'admin') {
+        } else if (role === 'admin') {
             return <Navigate to="/admin" replace />;
         } else {
             return <Navigate to="/" replace />;

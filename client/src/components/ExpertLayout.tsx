@@ -16,7 +16,7 @@ export default function ExpertLayout() {
   }, [pathname]);
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="h-screen bg-gray-50 flex overflow-hidden font-sans text-gray-900">
       <SideNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">

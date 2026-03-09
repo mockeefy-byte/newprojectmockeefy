@@ -33,6 +33,8 @@ export interface Profile {
     openings?: number;
     availability?: {
         sessionDuration: number;
+        /** Durations (minutes) this expert offers. e.g. [30], [60], or [30, 60]. */
+        allowedDurations?: number[];
         maxPerDay: number;
         weekly: Record<string, { from: string; to: string }[]>;
         breakDates: any[];
@@ -140,10 +142,15 @@ export const mapExpertToProfile = (expert: any): Profile => {
 
     const company = getCurrentCompany(expert.professionalDetails, category);
     const role = getJobTitle(expert.professionalDetails, category);
-    const skills = [
+    // Prefer expertSkills (skills with pricing) for booking; fallback to domains/tools
+    const expertSkillNames = (expert.expertSkills || [])
+        .filter((s: any) => s.isEnabled !== false)
+        .map((s: any) => (typeof s.skillId === "object" ? s.skillId?.name : null)).filter(Boolean);
+    const legacySkills = [
         ...(expert.skillsAndExpertise?.domains || []),
         ...(expert.skillsAndExpertise?.tools || [])
     ].map((skill: string) => skill.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '));
+    const skills = expertSkillNames.length > 0 ? expertSkillNames : (legacySkills.length > 0 ? legacySkills : [category]);
 
     const languages = (expert.skillsAndExpertise?.languages || []).map((lang: string) => lang.charAt(0).toUpperCase() + lang.slice(1));
     const availableTime = formatAvailability(expert.availability);

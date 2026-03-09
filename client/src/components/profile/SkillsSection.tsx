@@ -64,7 +64,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
     };
 
     const SkillTag = ({ skill, onRemove }: { skill: string, onRemove: () => void }) => (
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-[#004fcb] rounded-full text-sm font-medium border border-blue-100">
+        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-[#004fcb] rounded-full text-[11px] font-bold border border-blue-100">
             {skill}
             <button
                 onClick={onRemove}
@@ -76,17 +76,17 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
     );
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 font-sans">
             <div>
-                <h2 className="text-xl font-bold text-[#002a6b]">Skills & Languages</h2>
-                <p className="text-slate-500 mt-1">Add your technical skills, soft skills, and languages</p>
+                <h2 className="text-lg font-bold text-elite-black tracking-tight">Skills & Languages</h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">Add your technical skills, soft skills, and languages</p>
             </div>
 
             {/* Technical Skills */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <Code className="w-5 h-5 text-[#004fcb]" />
-                    <h3 className="text-lg font-semibold text-slate-800">Technical Skills</h3>
+                    <h3 className="text-sm font-bold text-elite-black">Technical Skills</h3>
                 </div>
 
                 <div className="flex gap-2">
@@ -100,7 +100,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                     />
                     <button
                         onClick={() => addSkill("technical")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -116,7 +116,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         />
                     ))}
                     {skills.technical.length === 0 && (
-                        <p className="text-gray-500 text-sm">No technical skills added yet</p>
+                        <p className="text-slate-500 text-[11px]">No technical skills added yet</p>
                     )}
                 </div>
             </div>
@@ -125,7 +125,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <Heart className="w-5 h-5 text-[#004fcb]" />
-                    <h3 className="text-lg font-semibold text-slate-800">Soft Skills</h3>
+                    <h3 className="text-sm font-bold text-elite-black">Soft Skills</h3>
                 </div>
 
                 <div className="flex gap-2">
@@ -139,7 +139,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                     />
                     <button
                         onClick={() => addSkill("soft")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -155,7 +155,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         />
                     ))}
                     {skills.soft.length === 0 && (
-                        <p className="text-gray-500 text-sm">No soft skills added yet</p>
+                        <p className="text-slate-500 text-[11px]">No soft skills added yet</p>
                     )}
                 </div>
             </div>
@@ -164,7 +164,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
             <div className="space-y-4">
                 <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-[#004fcb]" />
-                    <h3 className="text-lg font-semibold text-slate-800">Languages</h3>
+                    <h3 className="text-sm font-bold text-elite-black">Languages</h3>
                 </div>
 
                 <div className="flex gap-2">
@@ -178,7 +178,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                     />
                     <button
                         onClick={() => addSkill("languages")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -194,7 +194,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         />
                     ))}
                     {skills.languages.length === 0 && (
-                        <p className="text-gray-500 text-sm">No languages added yet</p>
+                        <p className="text-slate-500 text-[11px]">No languages added yet</p>
                     )}
                 </div>
             </div>
@@ -203,7 +203,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors disabled:opacity-50 shadow-md shadow-blue-200"
+                    className="flex items-center gap-2 px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-md shadow-blue-200"
                 >
                     <Save className="w-4 h-4" />
                     {saving ? "Saving..." : "Save Changes"}

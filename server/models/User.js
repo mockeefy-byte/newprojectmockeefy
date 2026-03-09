@@ -104,6 +104,7 @@ const userSchema = new mongoose.Schema({
   },
 
   preferences: {
+    experienceLevel: { type: String, enum: ['', 'Fresher', 'Experienced'], trim: true },
     jobType: {
       type: String,
       enum: ['Full-time', 'Part-time', 'Contract', 'Internship', 'Freelance'],

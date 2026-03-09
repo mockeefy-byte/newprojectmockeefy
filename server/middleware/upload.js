@@ -91,43 +91,21 @@ export const uploadProfile = multer({ storage: useCloudinary ? cloudProfileStora
 export const uploadVerification = multer({ storage: useCloudinary ? cloudVerificationStorage : localVerificationStorage });
 export const uploadUserProfile = multer({ storage: useCloudinary ? cloudUserStorage : localUserStorage });
 
-// Helper to get consistent file URL
+// Helper to get consistent file URL (works for both Cloudinary and local storage)
 export const getFileUrl = (req, file) => {
   if (!file) return "";
 
-  // If Cloudinary, path is the full secure URL
-  if (file.path && file.path.startsWith("http")) {
-    return file.path;
-  }
+  // Cloudinary: upload_stream callback merges result into req.file (secure_url, url, path, etc.)
+  const cloudinaryUrl = file.secure_url || file.url || (file.path && file.path.startsWith("http") ? file.path : null);
+  if (cloudinaryUrl) return cloudinaryUrl;
 
-  // If Local, path is absolute filesystem path. We need relative URL.
-  // We determine folder based on destination or filename context
-  // Fallback: check where it was likely stored based on middleware usage
-
-  // Simple heuristic for local files
+  // Local disk: path is absolute; we need a relative URL for the client
   const filename = file.filename;
-  if (!filename) return ""; // Should not happen
+  if (!filename) return "";
 
-  // Check valid local directories based on storage configurations
-  // (This assumes unique filenames or context handled by controller)
-
-  // For safety, let's use the file.destination property if available, but it gives absolute path.
-  // We know our structure:
-  // - uploads/profileImages
-  // - uploads/verification
-  // - uploads/userProfileImages
-
-  // Just map based on file type/context if possible, but the controller knows best what it uploaded.
-  // We can return just "/uploads/folder/filename"
-
-  // NOTE: This helper might be better placed in controllers or we make it smart.
-  // Let's require the controller to specify the 'type' or just deduce?
-
-  // Actually, standardizing here is hard without context. 
-  // Let's just return the filename and let controller prepend folder? 
-  // OR, we can return a relative path.
-
-  if (file.path.includes("verification")) return `/uploads/verification/${filename}`;
-  if (file.path.includes("userProfileImages")) return `/uploads/userProfileImages/${filename}`;
+  if (file.path && typeof file.path === "string") {
+    if (file.path.includes("verification")) return `/uploads/verification/${filename}`;
+    if (file.path.includes("userProfileImages")) return `/uploads/userProfileImages/${filename}`;
+  }
   return `/uploads/profileImages/${filename}`;
 };

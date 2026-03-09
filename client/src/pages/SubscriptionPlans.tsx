@@ -146,7 +146,7 @@ export default function SubscriptionPlans() {
                     className={`w-full py-6 rounded-xl text-sm font-semibold transition-all ${
                       plan.highlighted
                         ? "bg-[#004fcb] hover:bg-[#003bb5] text-white shadow-lg shadow-blue-900/20"
-                        : "bg-slate-900 hover:bg-slate-800 text-white"
+                        : "bg-[#004fcb] hover:bg-blue-600 text-white"
                     }`}
                   >
                     <Link to={plan.ctaLink}>{plan.cta}</Link>

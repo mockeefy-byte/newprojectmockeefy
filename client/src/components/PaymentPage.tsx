@@ -37,7 +37,7 @@ const PaymentPage: React.FC = () => {
 
   const orderSummary = {
     productName: bookingDetails
-      ? `${bookingDetails.category} Mock Interview`
+      ? `${bookingDetails.skill || bookingDetails.category} Mock Interview`
       : "Premium Subscription",
     plan: bookingDetails
       ? `${bookingDetails.duration} Min Session with ${bookingDetails.expertName}`
@@ -90,7 +90,9 @@ const PaymentPage: React.FC = () => {
           startTime: startTimeISO,
           endTime: endTimeISO,
           price: orderSummary.total,
-          topics: [bookingDetails?.category || "General Mock Interview"],
+          topics: Array.isArray(bookingDetails?.topics) && bookingDetails.topics.length
+            ? bookingDetails.topics
+            : [bookingDetails?.skill || bookingDetails?.category || "General Mock Interview"],
           duration: bookingDetails?.duration,
           notes: "Booked via Payment Page"
         }

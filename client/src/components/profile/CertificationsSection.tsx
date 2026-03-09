@@ -121,8 +121,8 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
                         <Award className="w-5 h-5 text-[#004fcb]" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">Certifications</h2>
-                        <p className="text-sm text-slate-500">Add your professional certifications and licenses</p>
+                        <h2 className="text-lg font-bold text-elite-black tracking-tight">Certifications</h2>
+                        <p className="text-[11px] text-slate-500">Add your professional certifications and licenses</p>
                     </div>
                 </div>
                 {!isEditing && (
@@ -139,7 +139,7 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
                                 credentialUrl: ""
                             });
                         }}
-                        className="flex items-center gap-2 text-sm font-medium text-[#004fcb] hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
+                        className="flex items-center gap-2 text-[11px] font-bold text-[#004fcb] hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors"
                     >
                         <Plus className="w-4 h-4" />
                         Add Certificate
@@ -221,7 +221,7 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
                         <button
                             onClick={handleSave}
                             disabled={loading}
-                            className="px-4 py-2 text-sm font-bold text-white bg-[#004fcb] hover:bg-[#003bb5] rounded-lg disabled:opacity-50"
+                            className="px-4 py-2 text-[11px] font-bold text-white bg-[#004fcb] hover:bg-blue-600 rounded-lg disabled:opacity-50"
                         >
                             {loading ? "Saving..." : "Save Certification"}
                         </button>
@@ -230,9 +230,9 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
             ) : (
                 <div className="space-y-4">
                     {certifications.length === 0 ? (
-                        <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                            <Award className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                            <p className="text-gray-500 font-medium">No certifications added yet</p>
+                        <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                            <Award className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                            <p className="text-slate-500 text-[11px]">No certifications added yet</p>
                         </div>
                     ) : (
                         certifications.map((cert, index) => (

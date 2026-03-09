@@ -1,5 +1,7 @@
 import PricingRule from "../models/PricingRule.js";
-import Category from "../models/Category.js"; // Added import
+import Category from "../models/Category.js";
+import * as priceCalculationService from "../services/priceCalculationService.js";
+import Skill from "../models/Skill.js";
 
 /* -------------------- Bulk Upsert Pricing Rules -------------------- */
 export const bulkUpsertPricingRules = async (req, res) => {
@@ -64,7 +66,7 @@ export const getRulesByCategory = async (req, res) => {
     }
 };
 
-/* -------------------- Calculate Price (Public/Booking) -------------------- */
+/* -------------------- Calculate Price (Public/Booking) - legacy POST -------------------- */
 export const calculatePrice = async (req, res) => {
     try {
         let { categoryId, skillId, level, duration } = req.body;
@@ -101,6 +103,78 @@ export const calculatePrice = async (req, res) => {
         res.json({ success: true, price: priceRule.price, currency: priceRule.currency });
     } catch (error) {
         console.error("Calculate Price Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+/* -------------------- GET /calculate-price (dynamic: skill + expert + duration) -------------------- */
+export const getCalculatePrice = async (req, res) => {
+    try {
+        const { skill, expertId, duration } = req.query;
+        if (!skill || !expertId || !duration) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required query params: skill, expertId, duration",
+            });
+        }
+        const result = await priceCalculationService.calculateBookingPrice(skill, expertId, duration);
+        if (result.error) {
+            const status = result.error === "Skill not found" || result.error === "Expert not found" ? 404 : 400;
+            return res.status(status).json({ success: false, message: result.error });
+        }
+        res.json({
+            success: true,
+            basePrice: result.basePrice,
+            expertLevel: result.expertLevel,
+            duration: result.duration,
+            finalPrice: result.finalPrice,
+            skillName: result.skillName,
+            levelMultiplier: result.levelMultiplier,
+            durationMultiplier: result.durationMultiplier,
+        });
+    } catch (error) {
+        console.error("Get Calculate Price Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+/* -------------------- Admin: List skills with base prices -------------------- */
+export const listSkillsWithPricing = async (req, res) => {
+    try {
+        const skills = await Skill.find({ isActive: true })
+            .select("name categoryId basePrice30")
+            .populate("categoryId", "name")
+            .lean();
+        res.json({ success: true, data: skills });
+    } catch (error) {
+        console.error("List Skills Pricing Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+/* -------------------- Admin: Update skill base price (basePrice30) -------------------- */
+export const updateSkillBasePrice = async (req, res) => {
+    try {
+        const { skillId } = req.params;
+        const { basePrice30 } = req.body;
+        if (basePrice30 == null || Number(basePrice30) < 0) {
+            return res.status(400).json({ success: false, message: "basePrice30 is required and must be >= 0" });
+        }
+        const skill = await Skill.findByIdAndUpdate(
+            skillId,
+            { basePrice30: Number(basePrice30) },
+            { new: true }
+        );
+        if (!skill) {
+            return res.status(404).json({ success: false, message: "Skill not found" });
+        }
+        res.json({
+            success: true,
+            message: "Skill base price updated",
+            data: { skillId: skill._id, skillName: skill.name, basePrice30: skill.basePrice30 },
+        });
+    } catch (error) {
+        console.error("Update Skill Base Price Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
