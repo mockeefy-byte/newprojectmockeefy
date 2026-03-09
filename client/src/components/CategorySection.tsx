@@ -61,9 +61,9 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
     };
 
     return (
-        <section className="mb-8 bg-white border border-slate-200/80 rounded-2xl p-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 group/section">
+        <section className="w-full max-w-full mb-8 bg-white border border-slate-200/80 rounded-2xl p-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 group/section">
             {/* Header - Unified with Card */}
-            <div className="flex items-center justify-between px-5 md:px-6 py-4 border-b border-slate-100 bg-slate-50/10">
+            <div className="flex items-center justify-between px-4 sm:px-5 md:px-6 py-4 border-b border-slate-100 bg-slate-50/10">
                 <div className="flex items-center gap-2.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-elite-blue shadow-[0_0_8px_rgba(0,79,203,0.5)]"></div>
                     <div>
@@ -81,18 +81,18 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
                 )}
             </div>
 
-            {/* Scroll Wrapper - clear space from section edges */}
-            <div className="relative px-5 md:px-6 pt-8 pb-5 md:pt-10 md:pb-6">
-                {/* Navigation Arrows - outside card area */}
-                <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-1 md:px-2 pointer-events-none z-20">
+            {/* Scroll Wrapper - fits to sides */}
+            <div className="relative px-3 sm:px-4 md:px-5 pt-6 md:pt-8 pb-4 md:pb-5">
+                {/* Arrows overlay the scroll area at edges (no gap) */}
+                <div className="absolute top-1/2 -translate-y-1/2 left-1 right-1 md:left-2 md:right-2 flex justify-between pointer-events-none z-20">
                     <button
                         onClick={() => scroll('left')}
                         className={`
                             pointer-events-auto
-                            w-10 h-10 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg rounded-2xl
+                            w-9 h-9 md:w-10 md:h-10 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg rounded-xl md:rounded-2xl
                             flex items-center justify-center text-slate-500 hover:text-elite-blue hover:border-slate-300 transition-all
                             ${!showLeftArrow ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100'}
-                            hidden md:flex
+                            hidden md:flex shrink-0
                         `}
                     >
                         <ChevronLeft size={18} strokeWidth={3} />
@@ -101,20 +101,21 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
                         onClick={() => scroll('right')}
                         className={`
                             pointer-events-auto
-                            w-10 h-10 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg rounded-2xl
+                            w-9 h-9 md:w-10 md:h-10 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg rounded-xl md:rounded-2xl
                             flex items-center justify-center text-slate-500 hover:text-elite-blue hover:border-slate-300 transition-all
                             ${!showRightArrow ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100'}
-                            hidden md:flex
+                            hidden md:flex shrink-0
                         `}
                     >
                         <ChevronRight size={18} strokeWidth={3} />
                     </button>
                 </div>
 
+                {/* Mobile: vertical stack. Desktop: horizontal scroll, tight spacing no gap */}
                 <div
                     ref={rowRef}
                     className={`
-                        flex overflow-x-auto pl-2 pr-2 md:pl-3 md:pr-3 pb-1 scrollbar-hide snap-x snap-mandatory
+                        flex flex-col gap-4 md:flex-row md:overflow-x-auto pl-0 pr-0 md:pl-0 md:pr-0 pb-1 scrollbar-hide md:snap-x md:snap-mandatory
                         ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}
                     `}
                     onMouseDown={handleMouseDown}
@@ -122,10 +123,10 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onScroll={checkScroll}
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
                 >
                     {profiles.map((profile) => (
-                        <div key={profile.id} className="snap-start shrink-0 w-[280px] md:w-[300px] flex mr-6 md:mr-8 last:mr-0">
+                        <div key={profile.id} className="snap-start shrink-0 w-full md:w-[300px] flex md:mr-5 last:mr-0">
                             <MentorJobCard mentor={profile} />
                         </div>
                     ))}

@@ -1,7 +1,7 @@
 // --- Google Meet Style Components ---
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff,
   MessageSquare, Code as CodeIcon,
@@ -500,25 +500,57 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
 
 // --- Main Page Wrapper ---
 export default function LiveMeetingPage() {
+  const { sessionId: sessionIdParam } = useParams<{ sessionId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
-  const meetingId = searchParams.get('meetingId');
-  const role = searchParams.get('role') || user?.role || location.state?.role;
+  // meetingId: from URL path (/live-meeting/:sessionId), query (?meetingId=), or state (e.g. from MySessions)
+  const sessionFromState = (location.state as any)?.session;
+  const meetingId =
+    sessionIdParam ||
+    searchParams.get('meetingId') ||
+    sessionFromState?.sessionId ||
+    null;
+  const role = searchParams.get('role') || (user as any)?.role || (location.state as any)?.role;
 
-  // DEBUG: Inspect user object structure
-  console.log('[LiveMeeting] Current User Object:', user);
+  // Business logic: never open meeting if session is completed or expired
+  const isSessionEndedOrExpired = sessionFromState && (
+    sessionFromState.status === 'Completed' ||
+    sessionFromState.status === 'Cancelled' ||
+    (sessionFromState.startTime && new Date(sessionFromState.startTime) < new Date())
+  );
 
   useEffect(() => {
     if (!meetingId) {
       toast.error("Invalid Meeting ID");
-      navigate('/dashboard');
+      navigate('/my-sessions', { replace: true });
     }
   }, [meetingId, navigate]);
 
-  if (!meetingId || !user) return <div className="h-screen bg-[#202124] flex items-center justify-center text-white">Loading...</div>;
+  useEffect(() => {
+    if (isSessionEndedOrExpired) {
+      toast.error("This meeting has ended or expired.");
+      navigate(role === 'expert' ? '/dashboard/sessions' : '/my-sessions', { replace: true });
+    }
+  }, [isSessionEndedOrExpired, navigate, role]);
+
+  if (!meetingId || !user) {
+    return (
+      <div className="h-screen bg-[#202124] flex items-center justify-center text-white">
+        {!user ? "Loading..." : "Invalid meeting link. Redirecting..."}
+      </div>
+    );
+  }
+
+  if (isSessionEndedOrExpired) {
+    return (
+      <div className="h-screen bg-[#202124] flex items-center justify-center text-white">
+        <p className="text-sm">Meeting ended or expired. Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <>

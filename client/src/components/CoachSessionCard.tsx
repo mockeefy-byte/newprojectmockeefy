@@ -1,11 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CategorySection } from "./CategorySection";
 import { MentorProfile } from "./MentorJobCard";
-import { AlertCircle } from "lucide-react";
+import HomeHeroSection from "./HomeHeroSection";
+import { AlertCircle, Search, SlidersHorizontal, X } from "lucide-react";
 import axios from '../lib/axios';
 import { getProfileImageUrl } from "../lib/imageUtils";
 import { useQuery } from "@tanstack/react-query";
 import { calculateAge, calculateProfessionalExperience, getCurrentCompany, getJobTitle } from "../lib/expertUtils";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 
 export default function CoachSessionCard() {
   const {
@@ -83,6 +86,47 @@ export default function CoachSessionCard() {
     });
   }, [expertsData, isExpertsLoading]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [experienceFilter, setExperienceFilter] = useState<string>("Any");
+  const [locationFilter, setLocationFilter] = useState<string>("Any");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const filteredProfiles = useMemo(() => {
+    let list = [...allProfiles];
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) => {
+        const name = (p.name || "").toLowerCase();
+        const role = (p.role || "").toLowerCase();
+        const company = (p.company || "").toLowerCase();
+        const location = (p.location || "").toLowerCase();
+        const skills = (p.skills || []).join(" ").toLowerCase();
+        const category = (p.category || "").toLowerCase();
+        const allTags = (p.allTags || []).join(" ").toLowerCase();
+        return name.includes(q) || role.includes(q) || company.includes(q) || location.includes(q) || skills.includes(q) || category.includes(q) || allTags.includes(q);
+      });
+    }
+    if (categoryFilter && categoryFilter !== "All") {
+      const lower = categoryFilter.toLowerCase();
+      list = list.filter((p) => (p.category && p.category.toLowerCase().includes(lower)) || (p.allTags && p.allTags.some((t: string) => t.toLowerCase().includes(lower))));
+    }
+    if (experienceFilter && experienceFilter !== "Any") {
+      list = list.filter((p) => {
+        const exp = (p.experience || "").toLowerCase();
+        if (experienceFilter === "Fresh") return exp.includes("fresh") || exp.includes("fresher");
+        if (experienceFilter === "0-2") return exp.includes("year") && (exp.startsWith("1") || exp.startsWith("2") || exp.startsWith("0"));
+        if (experienceFilter === "2-5") return exp.includes("year") && (exp.startsWith("2") || exp.startsWith("3") || exp.startsWith("4") || exp.startsWith("5"));
+        if (experienceFilter === "5+") return exp.includes("year") && !exp.startsWith("1") && !exp.startsWith("2") && !exp.startsWith("3") && !exp.startsWith("4");
+        return true;
+      });
+    }
+    if (locationFilter && locationFilter !== "Any") {
+      list = list.filter((p) => (p.location || "").toLowerCase().includes(locationFilter.toLowerCase()));
+    }
+    return list;
+  }, [allProfiles, searchQuery, categoryFilter, experienceFilter, locationFilter]);
+
   const categorizedProfiles = useMemo(() => {
     if (!categoriesData || !Array.isArray(categoriesData)) return [];
     const sections: { title: string, profiles: MentorProfile[] }[] = [];
@@ -91,7 +135,7 @@ export default function CoachSessionCard() {
       .map((c: any) => c.name);
 
     validCategories.forEach((sectionTitle: string) => {
-      const sectionProfiles = allProfiles.filter(p => {
+      const sectionProfiles = filteredProfiles.filter(p => {
         const lowerTitle = sectionTitle.toLowerCase();
         if (p.category && p.category.toLowerCase().includes(lowerTitle)) return true;
         if (p.allTags && p.allTags.some(t => t.toLowerCase().includes(lowerTitle))) return true;
@@ -103,7 +147,13 @@ export default function CoachSessionCard() {
       }
     });
     return sections;
-  }, [allProfiles, categoriesData]);
+  }, [filteredProfiles, categoriesData]);
+
+  const uniqueLocations = useMemo(() => {
+    const set = new Set<string>();
+    allProfiles.forEach((p) => { if (p.location?.trim()) set.add(p.location.trim()); });
+    return Array.from(set).sort().slice(0, 10);
+  }, [allProfiles]);
 
   if (isExpertsLoading || isCategoriesLoading) {
     return (
@@ -132,20 +182,106 @@ export default function CoachSessionCard() {
   }
 
   return (
-    <div className="pb-16 space-y-8">
-      {/* Single anchor target for any #experts navigation */}
+    <div className="w-full max-w-full pb-16 space-y-6 md:space-y-8">
+      {/* Blue hero with text - before experts list */}
+      <HomeHeroSection showCertProgress />
+
       <div id="experts" className="scroll-mt-6" />
 
-      {/* Same layout on mobile and desktop: category sections with horizontal card scroll */}
-      <div className="space-y-8">
-        {categorizedProfiles.map(section => (
-          <CategorySection
-            key={section.title}
-            title={section.title}
-            profiles={section.profiles}
-            onSeeAll={() => console.log(`Dir: ${section.title}`)}
-          />
-        ))}
+      {/* Search and filters - top-aligned, same row alignment */}
+      <div className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="relative flex-1 w-full sm:min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Search experts by name, skills, role, location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pl-9 pr-3 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white text-sm"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto h-10 rounded-xl border-slate-200 sm:shrink-0 flex items-center justify-center"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <SlidersHorizontal className="w-4 h-4 mr-2" />
+            Filters
+            {(categoryFilter !== "All" || experienceFilter !== "Any" || locationFilter !== "Any") && (
+              <span className="ml-1.5 w-2 h-2 rounded-full bg-elite-blue" />
+            )}
+          </Button>
+        </div>
+        {showFilters && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">Category</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="All">All</option>
+              {categoriesData && Array.isArray(categoriesData) && categoriesData
+                .filter((c: any) => c.status !== "Inactive")
+                .map((c: any) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+            </select>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-3 mr-1">Experience</span>
+            <select
+              value={experienceFilter}
+              onChange={(e) => setExperienceFilter(e.target.value)}
+              className="text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="Any">Any</option>
+              <option value="Fresh">Fresh</option>
+              <option value="0-2">0-2 years</option>
+              <option value="2-5">2-5 years</option>
+              <option value="5+">5+ years</option>
+            </select>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-3 mr-1">Location</span>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg px-3 py-1.5 bg-white"
+            >
+              <option value="Any">Any</option>
+              {uniqueLocations.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-slate-500 hover:text-slate-700 ml-2"
+              onClick={() => { setCategoryFilter("All"); setExperienceFilter("Any"); setLocationFilter("Any"); }}
+            >
+              <X className="w-3.5 h-3.5 mr-1" /> Clear
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="w-full space-y-8">
+        {categorizedProfiles.length === 0 ? (
+          <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-slate-100">
+            <p className="text-sm font-semibold text-slate-600">No experts match your search or filters.</p>
+            <Button variant="outline" size="sm" className="mt-3 rounded-xl" onClick={() => { setSearchQuery(""); setCategoryFilter("All"); setExperienceFilter("Any"); setLocationFilter("Any"); setShowFilters(false); }}>
+              Clear all
+            </Button>
+          </div>
+        ) : (
+          categorizedProfiles.map(section => (
+            <CategorySection
+              key={section.title}
+              title={section.title}
+              profiles={section.profiles}
+              onSeeAll={() => console.log(`Dir: ${section.title}`)}
+            />
+          ))
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Login from "./components/Login";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Register from "./components/Register";
 import ForgotPassword from "./components/ForgotPassword";
 import CompleteProfile from "./components/CompleteProfile";
@@ -35,6 +36,7 @@ import WatchMock from "./pages/WatchMock";
 import AiInterview from "./pages/AiInterview";
 import BottomNav from "./components/BottomNav";
 import JobReferral from "./pages/JobReferral";
+import SubscriptionPlans from "./pages/SubscriptionPlans";
 
 import PendingExpertsTable from "./components/PendingExpertsTable";
 import RejectedExpertsTable from "./components/RejectedExpertsTable";
@@ -93,7 +95,7 @@ function AppRoutes() {
           )
         } />
 
-        <Route path="/signin" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/signin" element={<ErrorBoundary><GuestRoute><Login /></GuestRoute></ErrorBoundary>} />
         <Route path="/signup" element={<GuestRoute><Register /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
@@ -102,6 +104,7 @@ function AppRoutes() {
         <Route path="/refund-cancellation" element={<RefundCancellation />} />
         <Route path="/return-policy" element={<ReturnPolicy />} />
         <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/plans" element={<SubscriptionPlans />} />
 
 
         {/* SHARED PROTECTED ROUTES (Allowed for Expert and Candidate) */}
@@ -113,7 +116,7 @@ function AppRoutes() {
           <Route path="/book-session" element={<BookSessionPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/my-sessions" element={<MySessions />} />
-          <Route path="/live-meeting" element={<LiveMeeting />} />
+          <Route path="/live-meeting/:sessionId?" element={<LiveMeeting />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>

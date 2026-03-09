@@ -44,13 +44,28 @@ function StatusBadge({ status }: { status: string }) {
     Confirmed: "bg-elite-blue text-white border-blue-600",
     Completed: "bg-slate-50 text-slate-500 border-slate-200",
     Cancelled: "bg-rose-50 text-rose-600 border-rose-100",
-    Live: "bg-emerald-50 text-emerald-600 border-emerald-100"
+    Live: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    Expired: "bg-amber-50/80 text-amber-700 border-amber-200"
   };
   return (
     <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black tracking-tight border shadow-sm ${styles[status] || styles.Completed}`}>
       {status}
     </span>
   );
+}
+
+/** Session is joinable only if not completed/cancelled and start time is in the future. */
+function canJoinSession(session: Session): boolean {
+  if (['Completed', 'Cancelled'].includes(session.status)) return false;
+  if (!session.startTime) return true; // no date = allow join for now
+  return new Date(session.startTime) > new Date();
+}
+
+/** Display status: show Expired when date passed but not completed. */
+function getDisplayStatus(session: Session): string {
+  if (session.status === 'Completed' || session.status === 'Cancelled') return session.status;
+  if (session.startTime && new Date(session.startTime) < new Date()) return 'Expired';
+  return session.status;
 }
 
 const MySessions = () => {
@@ -162,12 +177,12 @@ const MySessions = () => {
               </div>
             </div>
 
-            {/* 2. RECENT SESSIONS TABLE - HIGH DENSITY */}
+            {/* 2. SESSIONS LIST - Clear layout, Join Now only when joinable */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
                   <Sparkles className="w-4 h-4 text-elite-blue" />
-                  <h2 className="font-elite leading-none">Live Simulation Feed</h2>
+                  <h2 className="font-elite leading-none">My Simulations</h2>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -199,14 +214,15 @@ const MySessions = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Desktop: table */}
+              <div className="overflow-x-auto hidden md:block">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-5 py-3 text-[9px] font-black text-slate-400 tracking-tight">Candidate/Expert</th>
-                      <th className="px-5 py-3 text-[9px] font-black text-slate-400 tracking-tight hidden sm:table-cell">Timeline</th>
-                      <th className="px-5 py-3 text-[9px] font-black text-slate-400 tracking-tight">Status</th>
-                      <th className="px-5 py-3 text-[9px] font-black text-slate-400 tracking-tight text-right">Action</th>
+                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider">Session</th>
+                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider hidden sm:table-cell">Date & time</th>
+                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -217,58 +233,120 @@ const MySessions = () => {
                         </tr>
                       ))
                     ) : sessions.length > 0 ? (
-                      sessions.slice(0, 10).map(session => (
-                        <tr key={session.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-lg bg-slate-100 overflow-hidden border border-slate-200/60 p-0.5 shadow-sm">
-                                <img src={getProfileImageUrl(session.profileImage)} className="w-full h-full object-cover rounded-md" />
+                      sessions.slice(0, 10).map(session => {
+                        const displayStatus = getDisplayStatus(session);
+                        const joinable = canJoinSession(session);
+                        return (
+                          <tr key={session.id} className="group hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 p-0.5 shadow-sm shrink-0">
+                                  <img src={getProfileImageUrl(session.profileImage)} alt="" className="w-full h-full object-cover rounded-lg" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-black text-slate-900 text-[12px] tracking-tight truncate">Your session with {session.expert}</p>
+                                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{session.category} Simulation</p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-black text-slate-900 text-[11px] tracking-tight truncate">{session.category} Simulation</p>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{session.expert}</p>
+                            </td>
+                            <td className="px-5 py-4 hidden sm:table-cell">
+                              <p className="text-[11px] font-bold text-slate-800">{session.startTime ? new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>
+                              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{session.time}</p>
+                            </td>
+                            <td className="px-5 py-4">
+                              <StatusBadge status={displayStatus} />
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {displayStatus === 'Completed' ? (
+                                  <button
+                                    title="Download Certificate"
+                                    className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 hover:text-elite-blue hover:border-blue-200 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
+                                  >
+                                    <Award size={12} strokeWidth={2.5} />
+                                    <span>Certificate</span>
+                                  </button>
+                                ) : joinable ? (
+                                  <button
+                                    onClick={() => handleJoin(session)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-tight transition-all shadow-sm active:scale-95"
+                                  >
+                                    Join Now <ChevronRight size={12} strokeWidth={3} />
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-slate-400 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
+                                    {displayStatus === 'Expired' ? 'Expired' : displayStatus}
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5 hidden sm:table-cell">
-                            <p className="text-[10px] font-black text-slate-800 tracking-tighter uppercase">{session.time}</p>
-                            <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter mt-1">UTC Evaluation</p>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <StatusBadge status={session.status} />
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {session.status === 'Completed' ? (
-                                <button
-                                  title="Download Certificate"
-                                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-elite-blue hover:border-blue-200 rounded-lg transition-all text-[10px] font-bold flex items-center gap-1.5 shadow-sm"
-                                >
-                                  <Award size={12} strokeWidth={2.5} />
-                                  <span>Download Certificate</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleJoin(session)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elite-blue hover:bg-blue-600 text-white rounded-lg text-[9px] font-black tracking-tight transition-all shadow-sm active:scale-95"
-                                >
-                                  Join Studio <ChevronRight size={10} strokeWidth={3} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={4} className="px-5 py-20 text-center">
-                          <Briefcase className="w-8 h-8 text-slate-100 mx-auto mb-3" />
-                          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No intelligence gathered</p>
+                        <td colSpan={4} className="px-5 py-16 text-center">
+                          <Briefcase className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                          <p className="text-slate-600 font-semibold text-sm">No sessions yet</p>
+                          <p className="text-slate-400 text-xs mt-1">Book a simulation to see it here.</p>
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile: card layout */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {loading ? (
+                  [1, 2, 3].map(i => (
+                    <div key={i} className="p-4 animate-pulse"><div className="h-24 bg-slate-50 rounded-xl" /></div>
+                  ))
+                ) : sessions.length > 0 ? (
+                  sessions.slice(0, 10).map(session => {
+                    const displayStatus = getDisplayStatus(session);
+                    const joinable = canJoinSession(session);
+                    return (
+                      <div key={session.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 shrink-0">
+                            <img src={getProfileImageUrl(session.profileImage)} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900 text-sm">Your session with {session.expert}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{session.category} Simulation</p>
+                            {session.startTime && (
+                              <p className="text-xs text-slate-500 mt-1">{new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · {session.time}</p>
+                            )}
+                            <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                              <StatusBadge status={displayStatus} />
+                              {displayStatus === 'Completed' ? (
+                                <button className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                                  <Award size={12} /> Certificate
+                                </button>
+                              ) : joinable ? (
+                                <button
+                                  onClick={() => handleJoin(session)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-elite-blue text-white rounded-lg text-xs font-bold"
+                                >
+                                  Join Now <ChevronRight size={12} />
+                                </button>
+                              ) : (
+                                <span className="text-xs font-semibold text-slate-400">{displayStatus === 'Expired' ? 'Expired' : displayStatus}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-8 text-center">
+                    <Briefcase className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+                    <p className="text-slate-500 text-sm font-medium">No sessions yet</p>
+                    <p className="text-slate-400 text-xs mt-1">Book a simulation to see it here.</p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
+import createCloudinaryStorage from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary.js";
 import path from "path";
 import fs from "fs";
@@ -11,7 +11,8 @@ const useCloudinary = process.env.CLOUDINARY_CLOUD_NAME && process.env.STORAGE_T
 console.log(`Using ${useCloudinary ? "Cloudinary" : "Local Disk"} Storage`);
 
 // --- Cloudinary Storage Configuration ---
-const cloudProfileStorage = new CloudinaryStorage({
+// Package exports a factory function, not the class
+const cloudProfileStorage = createCloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "mockeefy/profiles",
@@ -20,7 +21,7 @@ const cloudProfileStorage = new CloudinaryStorage({
   },
 });
 
-const cloudVerificationStorage = new CloudinaryStorage({
+const cloudVerificationStorage = createCloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
     // If PDF, use raw to prevent image conversion issues
@@ -39,7 +40,7 @@ const cloudVerificationStorage = new CloudinaryStorage({
   },
 });
 
-const cloudUserStorage = new CloudinaryStorage({
+const cloudUserStorage = createCloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: "mockeefy/user_profiles",

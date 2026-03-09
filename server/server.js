@@ -60,8 +60,18 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
+// In development, allow any origin on Vite dev ports (e.g. http://10.41.72.143:5173)
+const isDev = process.env.NODE_ENV !== "production";
+const devOriginRegex = /^https?:\/\/[^/]+:(5173|5174)$/;
+
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // same-origin or non-browser
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isDev && devOriginRegex.test(origin)) return callback(null, true);
+    console.log(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "userid"],

@@ -4,6 +4,8 @@ import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
 import axios from "../lib/axios";
 import { useAuth } from "../context/AuthContext";
+import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import {
     Brain,
     MessageSquare,
@@ -15,11 +17,13 @@ import {
     ArrowRight,
     Sparkles,
     User,
-    Mic,
-    MicOff,
     StopCircle,
     RotateCcw,
-    Layers
+    Layers,
+    Volume2,
+    VolumeX,
+    Mic,
+    MicOff
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,6 +34,19 @@ type Difficulty = 'easy' | 'medium' | 'hard';
 type Tone = 'friendly' | 'strict' | 'professional';
 type SessionState = 'config' | 'live' | 'completed';
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
+
+interface EvaluationReport {
+    role: string;
+    overallScore: number;
+    technicalKnowledge: number;
+    communicationClarity: number;
+    confidence: number;
+    problemSolving: number;
+    strengths: string[];
+    weaknesses: string[];
+    improvementSuggestions: string[];
+    recommendedTopicsToStudy: string[];
+}
 
 interface SessionConfig {
     goal: MockType | null;
@@ -63,6 +80,11 @@ const AiInterview = () => {
     const [voiceState, setVoiceState] = useState<VoiceState>('idle');
     const [transcript, setTranscript] = useState<{ sender: 'ai' | 'user'; text: string }[]>([]);
     const [simulatedTime, setSimulatedTime] = useState(0);
+    const [waitingForNext, setWaitingForNext] = useState(false);
+    const [evaluationReport, setEvaluationReport] = useState<EvaluationReport | null>(null);
+    const [aiVoiceEnabled, setAiVoiceEnabled] = useState(true);
+    const { speak, cancel } = useSpeechSynthesis(aiVoiceEnabled);
+    const { startListening, stopListening, isListening, interimTranscript, error: speechError, isSupported: speechSupported } = useSpeechRecognition();
 
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -100,13 +122,15 @@ const AiInterview = () => {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // --- LIVE SESSION LOGIC ---
+    const INTERVIEW_DURATION_SEC = 600; // 10 minutes
+
+    // --- LIVE: 10 min timer ---
     useEffect(() => {
         let timer: NodeJS.Timeout;
         if (sessionState === 'live') {
             timer = setInterval(() => {
                 setSimulatedTime(prev => {
-                    if (prev >= 300) { // 5 minutes limit
+                    if (prev >= INTERVIEW_DURATION_SEC) {
                         clearInterval(timer);
                         endSession();
                         return prev;
@@ -114,83 +138,100 @@ const AiInterview = () => {
                     return prev + 1;
                 });
             }, 1000);
-
-            // Auto-start greeting
-            if (transcript.length === 0) {
-                setVoiceState('processing');
-                setTimeout(() => {
-                    setVoiceState('speaking');
-                    const greeting = `Welcome to your ${config.goal?.replace('-', ' ')} interview. Let's start. Tell me about yourself.`;
-                    setTranscript([{ sender: 'ai', text: greeting }]);
-                    // Save initial greeting
-                    if (sessionId) {
-                        axios.put(`/api/ai-interview/${sessionId}/update`, {
-                            transcript: [{ sender: 'ai', text: greeting }]
-                        }).catch(console.error);
-                    }
-                    setTimeout(() => setVoiceState('idle'), 3000);
-                }, 1500);
-            }
         }
         return () => clearInterval(timer);
-    }, [sessionState, sessionId]);
+    }, [sessionState]);
 
-    const handleMicClick = () => {
-        if (voiceState === 'idle') {
-            setVoiceState('listening');
-            // Simulate user speaking
-            setTimeout(() => {
-                setVoiceState('processing');
-                const userMsg = "I am a passionate developer with experience in React and Node.js...";
-                const newTranscriptUser = { sender: 'user' as const, text: userMsg };
+    // --- LIVE: Greeting + first question from knowledge base; AI speaks it ---
+    useEffect(() => {
+        if (sessionState !== 'live' || !sessionId || transcript.length > 0) return;
+        setVoiceState('processing');
+        (async () => {
+            try {
+                const res = await axios.get(`/api/ai-interview/${sessionId}/next-question`);
+                const data = res.data?.data;
+                const firstQuestion = data?.question || "Tell me about yourself and your experience in this field.";
+                const greeting = `Hello, I'm your interviewer for the ${config.role} role. This session will be about 10 minutes with 6 to 8 questions. Let's begin.\n\n${firstQuestion}`;
+                const initial = [{ sender: 'ai' as const, text: greeting }];
+                setTranscript(initial);
+                await axios.put(`/api/ai-interview/${sessionId}/update`, { transcript: initial });
+                setVoiceState('speaking');
+                const toSpeak = greeting.replace(/\n\n/g, '. ').trim();
+                await speak(toSpeak);
+                setVoiceState('idle');
+            } catch (e) {
+                console.error(e);
+                const fallback = `Welcome to your ${config.role} interview. Let's start.\n\nTell me about yourself and your relevant experience.`;
+                setTranscript([{ sender: 'ai', text: fallback }]);
+                setVoiceState('idle');
+            }
+        })();
+    }, [sessionState, sessionId, config.role]);
 
-                setTranscript(prev => [...prev, newTranscriptUser]);
+    const canSpeak = transcript.length > 0 && !waitingForNext && voiceState !== 'processing' && voiceState !== 'speaking';
 
-                // Save user message
-                if (sessionId) {
-                    axios.put(`/api/ai-interview/${sessionId}/update`, {
-                        transcript: [newTranscriptUser]
-                    }).catch(console.error);
-                }
-
-                // Simulate AI Response
-                setTimeout(() => {
-                    setVoiceState('speaking');
-                    const aiMsg = "That's great. Can you explain the difference between useMemo and useCallback?";
-                    const newTranscriptAi = { sender: 'ai' as const, text: aiMsg };
-
-                    setTranscript(prev => [...prev, newTranscriptAi]);
-
-                    // Save AI message
-                    if (sessionId) {
-                        axios.put(`/api/ai-interview/${sessionId}/update`, {
-                            transcript: [newTranscriptAi]
-                        }).catch(console.error);
-                    }
-
-                    setTimeout(() => setVoiceState('idle'), 4000); // Back to idle after "speaking"
-                }, 2000);
-            }, 3000); // User talks for 3s
+    const submitSpokenAnswer = async (answer: string) => {
+        const text = answer.trim();
+        if (!text || !sessionId || waitingForNext) return;
+        setWaitingForNext(true);
+        cancel();
+        const userMsg = { sender: 'user' as const, text };
+        setTranscript(prev => [...prev, userMsg]);
+        setVoiceState('processing');
+        try {
+            await axios.put(`/api/ai-interview/${sessionId}/update`, { transcript: [userMsg] });
+            const res = await axios.get(`/api/ai-interview/${sessionId}/next-question`);
+            const data = res.data?.data;
+            if (data?.done || !data?.question) {
+                await endSession();
+                setWaitingForNext(false);
+                return;
+            }
+            const replyText = data.reply || data.question;
+            const aiMsg = { sender: 'ai' as const, text: replyText };
+            setTranscript(prev => [...prev, aiMsg]);
+            await axios.put(`/api/ai-interview/${sessionId}/update`, { transcript: [aiMsg] });
+            setVoiceState('speaking');
+            await speak(replyText);
+            setVoiceState('idle');
+        } catch (e) {
+            console.error(e);
+            toast.error("Could not load next question.");
+            setVoiceState('idle');
         }
+        setWaitingForNext(false);
     };
 
+    const handleMicClick = async () => {
+        if (!canSpeak && !isListening) return;
+        if (isListening) {
+            stopListening();
+            return;
+        }
+        setVoiceState('listening');
+        const text = await startListening();
+        setVoiceState('idle');
+        if (text) await submitSpokenAnswer(text);
+    };
+
+    useEffect(() => {
+        if (speechError) toast.error(speechError);
+    }, [speechError]);
+
     const endSession = async () => {
+        cancel();
         if (sessionId) {
             setIsSaving(true);
             try {
+                const reportRes = await axios.post(`/api/ai-interview/${sessionId}/generate-report`);
+                const report = reportRes.data?.data;
+                if (report) setEvaluationReport(report);
                 await axios.post(`/api/ai-interview/${sessionId}/end`, {
                     duration: simulatedTime,
-                    feedback: "Good job! You demonstrated strong potential." // Placeholder to avoid replacement error before I verify usage.
-                    // I will split this into two steps: 1. Find useAuth path. 2. Apply changes.
-                    // This tool call is just to verify useAuth path effectively.
-                    // Actually, I can use grep_search in parallel.
-                    // But I need to provide replacement content if I use this tool.
-                    // So I will cancel this replacement and do a grep first.
-                    // Wait, I can't cancel. I'll just write the plan in thought and execute commands.
-                    // I will output a dummy replacements for now or just skip this tool call if possible? No.
-                    // I will use `view_file` on `MySessions` imports to be sure. feedback
+                    feedback: report ? 'Evaluation completed.' : '',
+                    evaluationReport: report,
                 });
-                toast.success("Session saved successfully!");
+                toast.success("Session saved. Here's your evaluation.");
             } catch (error) {
                 console.error("Failed to save session", error);
                 toast.error("Failed to save session.");
@@ -237,6 +278,8 @@ const AiInterview = () => {
                 setSessionState('live');
                 setSimulatedTime(0);
                 setTranscript([]);
+                setWaitingForNext(false);
+                setEvaluationReport(null);
                 toast.success("Starting AI Session...");
             }
         } catch (error) {
@@ -306,32 +349,56 @@ const AiInterview = () => {
                             <img src="/mockeefy.png" alt="AI Bot" className="w-full h-full object-cover" />
                         </div>
 
-                        {/* Status Badge */}
-                        <div className="mt-8 px-6 py-2 bg-white border border-gray-200 rounded-full shadow-sm text-sm font-bold uppercase tracking-widest text-[#004fcb] relative z-10 transition-all">
-                            {voiceState === 'idle' && "Ready"}
-                            {voiceState === 'listening' && "Listening..."}
-                            {voiceState === 'processing' && "Thinking..."}
-                            {voiceState === 'speaking' && "AI Speaking..."}
+                        {/* Status Badge + Voice controls */}
+                        <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 relative z-10">
+                            <div className="px-6 py-2 bg-white border border-gray-200 rounded-full shadow-sm text-sm font-bold uppercase tracking-widest text-[#004fcb]">
+                                {voiceState === 'idle' && "Tap the mic to speak your answer"}
+                                {voiceState === 'listening' && "Listening… tap again when done"}
+                                {voiceState === 'processing' && "Thinking..."}
+                                {voiceState === 'speaking' && "AI Speaking..."}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setAiVoiceEnabled((v) => !v)}
+                                    className={`p-2.5 rounded-xl border transition-all ${aiVoiceEnabled ? 'bg-blue-50 border-blue-200 text-[#004fcb]' : 'bg-gray-100 border-gray-200 text-gray-500'}`}
+                                    title={aiVoiceEnabled ? 'Turn off AI voice' : 'Turn on AI voice'}
+                                >
+                                    {aiVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                                </button>
+                                {transcript.length > 0 && (() => {
+                                    const lastAi = [...transcript].reverse().find((m) => m.sender === 'ai');
+                                    return lastAi ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setVoiceState('speaking');
+                                                speak(lastAi.text).then(() => setVoiceState('idle'));
+                                            }}
+                                            disabled={voiceState === 'speaking'}
+                                            className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50"
+                                            title="Replay last AI message"
+                                        >
+                                            <Volume2 size={18} />
+                                        </button>
+                                    ) : null;
+                                })()}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Transcript / Interaction Area */}
-                    <div className="w-full max-w-2xl bg-white border border-gray-200 rounded-2xl shadow-sm p-6 min-h-[150px] relative">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1 bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-wider rounded border border-gray-200">
-                            Latest Transcript
-                        </div>
+                    {/* Conversation (read-only, like ChatGPT) */}
+                    <div className="w-full max-w-2xl bg-white/80 backdrop-blur border border-gray-200 rounded-2xl shadow-sm p-5 min-h-[180px] max-h-[280px] overflow-y-auto">
                         <div className="flex flex-col gap-4">
                             {transcript.length === 0 ? (
-                                <p className="text-center text-gray-400 text-sm italic py-4">Session starting...</p>
+                                <p className="text-center text-gray-400 text-sm py-6">Loading first question...</p>
                             ) : (
-                                transcript.slice(-2).map((msg, i) => (
+                                transcript.map((msg, i) => (
                                     <div key={i} className={`flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${msg.sender === 'ai' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                                            }`}>
-                                            {msg.sender === 'ai' ? 'AI' : 'YOU'}
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${msg.sender === 'ai' ? 'bg-[#004fcb] text-white' : 'bg-gray-600 text-white'}`}>
+                                            {msg.sender === 'ai' ? 'AI' : 'You'}
                                         </div>
-                                        <div className={`p-3 rounded-2xl text-sm leading-relaxed max-w-[80%] ${msg.sender === 'ai' ? 'bg-blue-50 text-gray-800 rounded-tl-none' : 'bg-gray-50 text-gray-700 rounded-tr-none'
-                                            }`}>
+                                        <div className={`p-3 rounded-2xl text-sm leading-relaxed max-w-[85%] whitespace-pre-wrap ${msg.sender === 'ai' ? 'bg-gray-100 text-gray-900 rounded-tl-none' : 'bg-[#004fcb] text-white rounded-tr-none'}`}>
                                             {msg.text}
                                         </div>
                                     </div>
@@ -340,22 +407,32 @@ const AiInterview = () => {
                         </div>
                     </div>
 
-                    {/* Controls */}
-                    <div className="mt-8 flex gap-4">
-                        <button
-                            onClick={handleMicClick}
-                            disabled={voiceState !== 'idle'}
-                            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all ${voiceState === 'listening'
-                                ? 'bg-red-500 text-white scale-110 shadow-red-500/30'
-                                : voiceState !== 'idle' ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-[#004fcb] text-white hover:bg-blue-700 hover:scale-105 shadow-blue-500/30'
-                                }`}
-                        >
-                            <Mic size={24} />
-                        </button>
-                        {/* Mute Button (Simulated) */}
-                        <button className="w-16 h-16 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 flex items-center justify-center shadow-sm transition-all">
-                            <MicOff size={24} />
-                        </button>
+                    {/* Voice-only: one big mic (like ChatGPT / Grok voice) */}
+                    <div className="w-full max-w-2xl mt-8 flex flex-col items-center gap-4">
+                        {isListening && interimTranscript && (
+                            <p className="text-sm text-gray-600 max-w-md text-center italic">“{interimTranscript}”</p>
+                        )}
+                        {speechSupported ? (
+                            <button
+                                type="button"
+                                onClick={handleMicClick}
+                                disabled={!canSpeak && !isListening}
+                                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-xl ${isListening
+                                    ? 'bg-red-500 text-white scale-110 animate-pulse'
+                                    : canSpeak
+                                        ? 'bg-[#004fcb] text-white hover:bg-blue-600 hover:scale-105 active:scale-95'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                title={isListening ? 'Tap to stop and send' : 'Tap to speak your answer'}
+                            >
+                                {isListening ? <MicOff size={36} className="sm:w-10 sm:h-10" /> : <Mic size={36} className="sm:w-10 sm:h-10" />}
+                            </button>
+                        ) : (
+                            <p className="text-sm text-amber-600 bg-amber-50 px-4 py-2 rounded-lg">Voice not supported in this browser. Use Chrome for full experience.</p>
+                        )}
+                        <p className="text-xs text-gray-500 text-center max-w-sm">
+                            {speechSupported ? "Tap once to start speaking, tap again when you're done. No typing — just talk." : ""}
+                        </p>
                     </div>
 
                 </main>
@@ -364,31 +441,88 @@ const AiInterview = () => {
     }
 
     if (sessionState === 'completed') {
+        const r = evaluationReport;
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
                 <Navigation />
-                <main className="flex-1 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center justify-center text-center">
-                    <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                        <CheckCircle2 className="w-12 h-12 text-green-600" />
+                <main className="flex-1 max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-gray-900">Interview Summary</h1>
+                            <p className="text-gray-500 text-sm">Role: {r?.role ?? config.role}</p>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-black text-gray-900 mb-2">Session Completed</h1>
-                    <p className="text-gray-500 mb-8 max-w-md">Great job! Your mock interview has been recorded. The AI is generating your detailed feedback report now.</p>
+
+                    {r ? (
+                        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/80">
+                                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Overall Score: {r.overallScore}/10</p>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Technical</p>
+                                        <p className="text-xl font-black text-gray-900">{r.technicalKnowledge}/10</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+                                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Communication</p>
+                                        <p className="text-xl font-black text-gray-900">{r.communicationClarity}/10</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Confidence</p>
+                                        <p className="text-xl font-black text-gray-900">{r.confidence}/10</p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-violet-50 border border-violet-100">
+                                        <p className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Problem Solving</p>
+                                        <p className="text-xl font-black text-gray-900">{r.problemSolving}/10</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Strengths</h3>
+                                    <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                        {r.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Weaknesses</h3>
+                                    <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                        {r.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Improvement Suggestions</h3>
+                                    <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                        {r.improvementSuggestions.map((s, i) => <li key={i}>{s}</li>)}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Recommended Topics to Study</h3>
+                                    <ul className="list-disc list-inside space-y-1 text-gray-700 text-sm">
+                                        {r.recommendedTopicsToStudy.map((t, i) => <li key={i}>{t}</li>)}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 mb-6">Your session has been saved. Evaluation report could not be generated.</p>
+                    )}
 
                     <div className="flex gap-4">
                         <button
-                            onClick={() => setSessionState('config')}
+                            onClick={() => { setSessionState('config'); setEvaluationReport(null); }}
                             className="px-8 py-3 bg-white border border-gray-200 text-gray-900 font-bold rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2"
                         >
-                            <RotateCcw size={18} /> Start New
-                        </button>
-                        <button className="px-8 py-3 bg-[#004fcb] text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
-                            View Report
+                            <RotateCcw size={18} /> Start New Interview
                         </button>
                     </div>
                 </main>
                 <Footer />
             </div>
-        )
+        );
     }
 
     return (

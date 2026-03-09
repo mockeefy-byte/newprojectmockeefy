@@ -36,6 +36,10 @@ const aiSessionSchema = new mongoose.Schema({
     feedback: {
         type: String,
         default: ''
+    },
+    evaluationReport: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
     }
 }, {
     timestamps: true

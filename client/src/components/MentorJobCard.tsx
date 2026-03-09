@@ -76,7 +76,7 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
             onClick={handleCardClick}
             className="
                 group relative bg-white rounded-2xl border border-slate-200/60
-                w-full h-full flex flex-col p-6
+                w-full min-w-0 h-full flex flex-col p-5 md:p-6
                 transition-all duration-500 ease-out
                 hover:shadow-[0_12px_45px_-10px_rgba(0,0,0,0.08)] hover:border-blue-100/50
                 cursor-pointer snap-start overflow-hidden shadow-sm
@@ -109,10 +109,10 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
                 </div>
             </div>
 
-            {/* Sub-headline: Role & Company */}
-            <div className="mb-3 min-h-[42px] flex items-center">
-                <p className="text-[14px] font-normal text-text-secondary tracking-tight line-clamp-2">
-                    {mentor.role} {mentor.company && <span className="text-slate-400 font-normal whitespace-nowrap">at {mentor.company}</span>}
+            {/* Sub-headline: Role & Company - wrap so no truncation like "Promo Cor" */}
+            <div className="mb-3 min-h-[40px] flex items-start">
+                <p className="text-[14px] font-normal text-text-secondary tracking-tight line-clamp-2 break-words min-w-0">
+                    {mentor.role}{mentor.company ? ` at ${mentor.company}` : ""}
                 </p>
             </div>
 
@@ -132,23 +132,23 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
                 )}
             </div>
 
-            {/* Icon-based Meta Row - Wrapping enabled, no internal scroll */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 border-b border-slate-100 mb-4 min-h-[48px]">
-                <div className="flex items-center gap-2 text-slate-400">
-                    <Briefcase size={14} strokeWidth={2.5} />
-                    <span className="text-[11px] font-bold text-slate-600">{mentor.experience}</span>
+            {/* Icon-based Meta Row - full text visible (wrap, no truncation) */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 border-b border-slate-100 mb-4 min-h-[44px]">
+                <div className="flex items-center gap-2 text-slate-400 min-w-0">
+                    <Briefcase size={14} strokeWidth={2.5} className="shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-600 break-words">{mentor.experience}</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-400 font-elite">
-                    <MapPin size={14} strokeWidth={2.5} />
-                    <span className="text-[11px] font-bold text-slate-600">{mentor.location || "Global"}</span>
+                <div className="flex items-center gap-2 text-slate-400 min-w-0">
+                    <MapPin size={14} strokeWidth={2.5} className="shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-600 break-words">{mentor.location || "Global"}</span>
                 </div>
             </div>
 
-            {/* Availability Detail */}
+            {/* Availability Detail - allow wrap so "AVAILABLE TODAY" isn't cut off */}
             <div className="flex items-center gap-2 mb-4 min-h-[30px]">
-                <div className="px-2 py-1 rounded-md bg-emerald-50 border border-emerald-100 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tight">
+                <div className="px-2 py-1 rounded-md bg-emerald-50 border border-emerald-100 flex items-center gap-1.5 shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tight break-words">
                         {mentor.activeTime || "Next slot tomorrow"}
                     </span>
                 </div>

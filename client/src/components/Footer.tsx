@@ -41,7 +41,7 @@ const Footer = ({ minimal = false }: FooterProps) => (
             <h3 className="font-bold text-[#004fcb] text-sm uppercase tracking-widest">Product</h3>
             <ul className="space-y-4">
               <li><a href="#" className="text-slate-500 hover:text-[#004fcb] transition-all duration-200 text-sm font-medium flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[#004fcb] transition-colors"></span>Features</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-[#004fcb] transition-all duration-200 text-sm font-medium flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[#004fcb] transition-colors"></span>Pricing</a></li>
+              <li><Link to="/plans" className="text-slate-500 hover:text-[#004fcb] transition-all duration-200 text-sm font-medium flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[#004fcb] transition-colors"></span>Pricing</Link></li>
               <li><a href="#" className="text-slate-500 hover:text-[#004fcb] transition-all duration-200 text-sm font-medium flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[#004fcb] transition-colors"></span>Use Cases</a></li>
               <li><a href="#" className="text-slate-500 hover:text-[#004fcb] transition-all duration-200 text-sm font-medium flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover:bg-[#004fcb] transition-colors"></span>Testimonials</a></li>
             </ul>

@@ -12,5 +12,7 @@ router.put('/:id/update', aiSessionController.updateSession);
 router.post('/:id/end', aiSessionController.endSession);
 router.get('/my-sessions', aiSessionController.getUserSessions);
 router.get('/:id', aiSessionController.getSession);
+router.get('/:id/next-question', aiSessionController.getNextQuestion);
+router.post('/:id/generate-report', aiSessionController.generateReport);
 
 export default router;

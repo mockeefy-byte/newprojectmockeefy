@@ -15,7 +15,10 @@ import {
   HelpCircle,
   ChevronDown,
   Bot,
-  Sparkles
+  Sparkles,
+  Briefcase,
+  Bookmark,
+  Award
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getProfileImageUrl } from "../lib/imageUtils";
@@ -120,6 +123,12 @@ const Navigation = () => {
     { name: "My Sessions", href: "/my-sessions", icon: <Calendar size={16} /> },
     { name: "Mockeefy AI", href: "/ai-video", icon: <Bot size={16} /> },
   ];
+
+  const sidebarNavItems = user ? [
+    { name: "Career Hub", href: "/my-sessions?view=jobs", icon: <Briefcase size={16} /> },
+    { name: "Saved Experts", href: "/my-sessions?view=saved", icon: <Bookmark size={16} /> },
+    { name: "Certificates", href: "/my-sessions?view=certificates", icon: <Award size={16} /> },
+  ] : [];
 
   const profileMenuItems = [
     { name: "Profile Settings", href: "/profile", icon: <User size={16} /> },
@@ -332,6 +341,23 @@ const Navigation = () => {
                   {item.name}
                 </Link>
               ))}
+              {sidebarNavItems.length > 0 && (
+                <>
+                  <div className="h-px bg-slate-100 my-3 mx-2" />
+                  <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Dashboard</p>
+                  {sidebarNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 border border-transparent active:border-slate-100 transition-all"
+                      onClick={closeAllDropdowns}
+                    >
+                      <span className="mr-3 text-slate-400">{item.icon}</span>
+                      {item.name}
+                    </Link>
+                  ))}
+                </>
+              )}
               <div className="h-px bg-slate-100 my-3 mx-2"></div>
               {user ? (
                 <>
