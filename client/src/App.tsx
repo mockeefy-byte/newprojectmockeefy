@@ -34,7 +34,6 @@ import UserProfile from "./pages/UserProfile";
 import Notifications from "./pages/Notifications";
 import WatchMock from "./pages/WatchMock";
 import AiInterview from "./pages/AiInterview";
-import BottomNav from "./components/BottomNav";
 import JobReferral from "./pages/JobReferral";
 import SubscriptionPlans from "./pages/SubscriptionPlans";
 
@@ -173,7 +172,6 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <Toaster richColors position="top-right" />
         <AppRoutes />
-        <BottomNav />
       </QueryClientProvider>
     </>
   );

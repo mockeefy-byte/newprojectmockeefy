@@ -90,55 +90,55 @@ const InfoPanel = ({ fullWidth }: InfoPanelProps) => {
       </div>
 
       {/* Interview → Certificate (3 completed = certificate) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase className="w-3.5 h-3.5 text-elite-blue" />
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Interview → Certificate</h2>
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 sm:p-6">
+        <div className="flex items-center gap-2.5 mb-5">
+          <Briefcase className="w-4 h-4 text-elite-blue shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">Path to certificate</h2>
         </div>
-        <div className="space-y-2.5">
-          <div className="flex gap-3 items-center">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border ${step1Done ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+        <div className="space-y-4">
+          <div className="flex gap-4 items-start">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${step1Done ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
               1
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-900">Complete 3 mock interviews</p>
-              <p className="text-[10px] text-slate-400">{completed}/{target} sessions</p>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p className="text-sm font-semibold text-slate-900">Complete 3 mock interviews</p>
+              <p className="text-xs text-slate-500 mt-1">{completed} of {target} sessions done</p>
             </div>
-            {step1Done && <Check className="w-4 h-4 text-emerald-500 shrink-0" strokeWidth={3} />}
+            {step1Done && <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" strokeWidth={3} />}
           </div>
-          <div className="flex gap-3 items-center">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border ${step2Active ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+          <div className="flex gap-4 items-start">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${step2Active ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
               2
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-900">Earn certificate</p>
-              <p className="text-[10px] text-slate-400">{hasCert ? "Issued" : isEligible ? "Ready to claim" : "Unlock after step 1"}</p>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p className="text-sm font-semibold text-slate-900">Earn your certificate</p>
+              <p className="text-xs text-slate-500 mt-1">{hasCert ? "Certificate issued" : isEligible ? "Ready to claim" : "Available after step 1"}</p>
             </div>
-            {(hasCert || isEligible) && <Check className="w-4 h-4 text-emerald-500 shrink-0" strokeWidth={3} />}
+            {(hasCert || isEligible) && <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" strokeWidth={3} />}
           </div>
-          <div className="flex gap-3 items-center">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border ${step3Active ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+          <div className="flex gap-4 items-start">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 ${step3Active ? 'bg-elite-blue border-elite-blue text-white' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
               3
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-900">Get referred to companies</p>
-              <p className="text-[10px] text-slate-400">500+ firms</p>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p className="text-sm font-semibold text-slate-900">Get referred to companies</p>
+              <p className="text-xs text-slate-500 mt-1">500+ hiring companies in Pipeline Hub</p>
             </div>
-            {step3Active && <Check className="w-4 h-4 text-emerald-500 shrink-0" strokeWidth={3} />}
+            {step3Active && <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" strokeWidth={3} />}
           </div>
           {isEligible ? (
             <button
               onClick={handleGetCertificate}
-              className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-xs font-semibold transition-all"
+              className="w-full mt-5 flex items-center justify-center gap-2 py-3 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all"
             >
-              <Award size={14} /> Get your certificate
+              <Award size={16} /> Get your certificate
             </button>
           ) : (
             <button
               onClick={() => navigate(hasCert ? '/my-sessions?view=certificates' : '/my-sessions?view=jobs')}
-              className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-xs font-semibold transition-all"
+              className="w-full mt-5 flex items-center justify-center gap-2 py-3 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all"
             >
-              {hasCert ? "View certificates" : "Pipeline Hub"} <ChevronRight size={14} />
+              {hasCert ? "View certificates" : "Open Pipeline Hub"} <ChevronRight size={16} />
             </button>
           )}
         </div>

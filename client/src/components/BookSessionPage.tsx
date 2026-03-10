@@ -5,7 +5,7 @@ import {
   Star, MapPin, Clock, Users, Award,
   Calendar, CheckCircle, CreditCard, Shield, Video,
   ChevronLeft, ChevronRight, X, ThumbsUp, Zap, MessageCircle, Briefcase,
-  Share2, Check, Info, ArrowRight, Timer
+  Share2, Check, Info, ArrowRight, Timer, UserCircle2, BadgeCheck, Code2, Terminal
 } from "lucide-react";
 import Swal from "sweetalert2";
 import Navigation from "./Navigation";
@@ -417,7 +417,7 @@ const BookSessionPage = () => {
           expertRole: profile.role,
           date: dates[selectedDate],
           slot: selectedSlot,
-          price: calculatedPrice || sessionPrice,
+          price: displayPrice,
           duration: sessionDuration,
           category: profile.category,
           level: expertLevel,
@@ -456,115 +456,139 @@ const BookSessionPage = () => {
     return colors[section] || "bg-gray-50 text-gray-700 border-gray-100";
   };
 
+  const parsePriceToNumber = (value: unknown): number | null => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value !== "string") return null;
+    // Accept formats like "₹700/hr", "700", "700.00", "INR 700"
+    const match = value.replace(/,/g, "").match(/(\d+(\.\d+)?)/);
+    if (!match?.[1]) return null;
+    const num = Number(match[1]);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  // Single source for price display — avoids double rupee symbol and handles string prices like "₹700/hr"
+  const basePrice = parsePriceToNumber(sessionPrice) ?? 0;
+  const displayPrice = calculatedPrice > 0 ? calculatedPrice : basePrice;
+  const formatPrice = (amount: number | null | undefined) => {
+    if (amount == null || !Number.isFinite(amount)) return "—";
+    return `₹${amount}`;
+  };
+
   // LinkedIn-style Profile Header
 
 
   const ProfileHeader = () => (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
       {/* Banner */}
-      <div className="h-40 md:h-48 relative overflow-hidden">
+      <div className="h-36 md:h-44 relative overflow-hidden">
         <img
           src={bannerImage}
           alt="Banner"
           className="w-full h-full object-cover opacity-80"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
         <div className="absolute top-4 right-4 flex gap-2">
-          <button className="white-glass p-2 rounded-full hover:bg-white/40 transition-colors shadow-sm bg-white/20 backdrop-blur-md">
+          <button className="white-glass p-2.5 rounded-full hover:bg-white/40 transition-colors shadow-sm bg-white/20 backdrop-blur-md">
             <Share2 className="w-5 h-5 text-gray-700" />
           </button>
         </div>
       </div>
 
-      {/* Profile Info Section */}
-      <div className="px-6 pb-6 mt-4">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Avatar on Left */}
-          <div className="relative shrink-0 -mt-16 md:-mt-20">
+      {/* Profile Info Section — single row: avatar + details + price aligned */}
+      <div className="px-5 sm:px-6 pb-6 pt-5">
+        <div className="grid grid-cols-1 md:grid-cols-[auto,1fr,auto] gap-5 md:gap-6 items-start">
+          {/* Avatar */}
+          <div className="relative shrink-0 -mt-14 md:-mt-16">
             <div className="relative inline-block">
               <img
                 src={profile.avatar || "/mockeefy.png"}
                 alt={profile.name}
-                className="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-white bg-white object-cover shadow-md"
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-white object-cover shadow-lg shadow-black/5"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = "/mockeefy.png";
                 }}
               />
-              <div className="absolute bottom-2 right-2 bg-green-500 border-2 border-white w-4 h-4 rounded-full"></div>
-            </div>
-          </div>
-
-          {/* Details on Right */}
-          <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                    {profile.name}
-                  </h1>
-                  <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded border border-yellow-100">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-bold text-yellow-800">{profile.rating}</span>
-                  </div>
-                </div>
-
-                <p className="text-lg text-gray-700 font-medium mb-1">
-                  {profile.role}
-                  {profile.company && (
-                    <span className="text-gray-500"> • {profile.company}</span>
-                  )}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 font-medium my-3">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    {profile.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-4 h-4 text-gray-400" />
-                    {profile.experience} Experience
-                  </span>
-                </div>
-
-                <div className="flex gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getCategoryColor(profile.category)}`}>
-                    {profile.category} SPECIALIST
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-bold border border-green-100 bg-green-50 text-green-700">
-                    VERIFIED EXPERT
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 min-w-[120px] bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                <div className="text-xl font-bold text-[#004fcb]">{calculatedPrice > 0 ? `₹${calculatedPrice}` : sessionPrice}</div>
-                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">per session</div>
+              <div
+                className="absolute bottom-1 right-1 flex items-center justify-center rounded-full"
+                title="Online"
+              >
+                <div className="bg-green-500 border-2 border-white w-2.5 h-2.5 rounded-full shrink-0" />
               </div>
             </div>
           </div>
+
+          {/* Name, role, location, experience — main block */}
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2.5 gap-y-2">
+              <div className="inline-flex items-center gap-1.5">
+                <UserCircle2 className="w-4 h-4 text-gray-400" />
+                <h1 className="text-xl md:text-2xl font-extrabold text-gray-900 leading-tight tracking-tight">
+                  {profile.name}
+                </h1>
+              </div>
+              <div className="inline-flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-current shrink-0" />
+                <span className="text-xs font-bold text-amber-900 tabular-nums">{profile.rating ?? 0}</span>
+                <span className="text-[11px] font-semibold text-amber-900/70">({profile.reviews ?? 0})</span>
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 pl-0.5 text-xs text-gray-700 font-semibold leading-snug">
+              <Code2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span>{profile.role}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="truncate max-w-[260px]">{profile.location}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-gray-400 shrink-0" />
+                {profile.experience} Experience
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1.5">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${getCategoryColor(profile.category)}`}>
+                <Briefcase className="w-3.5 h-3.5 text-gray-500" />
+                {profile.category} Specialist
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
+                Verified Expert
+              </span>
+            </div>
+          </div>
+
+          {/* Price card removed per UX request */}
         </div>
       </div>
     </div>
   );
 
-  // LinkedIn-style Booking Sidebar
+  // Booking card — used in sidebar (desktop) and mobile sheet
   const BookingCard = () => (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-5 space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-gray-900">Configure Session</h3>
-        <Info className="w-4 h-4 text-gray-400 cursor-help" />
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Configure Session</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Topic, duration, date & time</p>
+        </div>
+        <button type="button" className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0" title="Session info">
+          <Info className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Level Selector */}
-      {/* Skill (from expert) + Duration (30 or 60) — amount from these only */}
-      <div className="space-y-4 mb-4">
+      {/* Skill, level, duration */}
+      <div className="space-y-4 sm:space-y-5">
         <div>
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Skill / Topic</span>
+          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Skill / Topic</label>
           <select
             value={selectedSkill}
             onChange={(e) => setSelectedSkill(e.target.value)}
-            className="w-full text-sm font-bold text-gray-900 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
           >
             {skillOptions.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -573,18 +597,18 @@ const BookSessionPage = () => {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Expert Level</span>
-            <div className="w-full text-sm font-bold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded-md">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Expert Level</label>
+            <div className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl">
               {expertLevel}
             </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">Set by expert</p>
+            <p className="text-xs text-gray-500 mt-1.5">Set by expert</p>
           </div>
           <div>
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1">Duration</span>
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Duration</label>
             <select
               value={durationOptions.includes(sessionDuration) ? sessionDuration : durationOptions[0]}
               onChange={(e) => setSessionDuration(Number(e.target.value))}
-              className="w-full text-sm font-bold text-gray-900 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
             >
               {durationOptions.includes(30) && <option value={30}>30 Minutes</option>}
               {durationOptions.includes(60) && <option value={60}>60 Minutes</option>}
@@ -593,126 +617,119 @@ const BookSessionPage = () => {
         </div>
       </div>
 
-      {/* Price Display */}
-      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100 mb-6">
-        <div>
-          <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] block mb-1">Total Amount</span>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-black text-[#004fcb]">₹{calculatedPrice > 0 ? calculatedPrice : sessionPrice}</span>
-            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">INR</span>
+      {/* Total Amount — session total (not hourly); label matches */}
+      <div className="flex items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-blue-200 bg-blue-50/80">
+        <div className="min-w-0">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-0.5">Total amount</span>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xl sm:text-2xl font-bold text-[#004fcb] tabular-nums">{formatPrice(displayPrice)}</span>
+            <span className="text-xs font-semibold text-gray-600">for {sessionDuration} min · INR</span>
           </div>
         </div>
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-            <Timer className="w-3 h-3" /> {sessionDuration} Min Session
-          </div>
-          <div className="px-2 py-0.5 rounded bg-blue-100 text-[#004fcb] text-[9px] font-black uppercase tracking-widest border border-blue-200">
-            {expertLevel} Level
-          </div>
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
+          <span className="flex items-center gap-1 text-xs font-semibold text-gray-700">
+            <Timer className="w-3.5 h-3.5" /> {sessionDuration} min
+          </span>
+          <span className="px-2 py-0.5 rounded-lg bg-blue-100 text-[#004fcb] text-xs font-bold">
+            {expertLevel}
+          </span>
         </div>
       </div>
 
-
-      {/* Month Header */}
-      <div className="flex flex-col px-1">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h4 className="text-[10px] font-black text-[#004fcb] uppercase tracking-widest mb-0.5">
-              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h4>
-            <span className="text-[10px] font-medium text-gray-400">Select your preferred date</span>
-          </div>
+      {/* ——— Pick a date ——— */}
+      <div className="border-t border-gray-100 pt-4 sm:pt-5">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pick a date</p>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-bold text-gray-900">
+            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h4>
           <div className="flex gap-1">
             <button
               onClick={prevMonth}
               disabled={currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear()}
-              className="p-1 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft size={16} className="text-gray-600" />
+              <ChevronLeft size={18} className="text-gray-600" />
+            </button>
+            <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronRight size={18} className="text-gray-600" />
+            </button>
+          </div>
+        </div>
+
+        <div className="-mx-1">
+          <div
+            ref={carouselRef}
+            className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 pt-1 px-1 scrollbar-none no-scrollbar snap-x snap-mandatory scroll-smooth"
+          >
+            {dates.map((date, index) => {
+              const isToday = new Date().toDateString() === date.toDateString();
+              return (
+                <button
+                  key={index}
+                  data-active={selectedDate === index}
+                  onClick={() => {
+                    setSelectedDate(index);
+                    setSelectedSlot(null);
+                  }}
+                  className={`flex flex-col items-center justify-start pt-3 pb-3 px-4 rounded-xl min-w-[72px] sm:min-w-[80px] transition-all duration-200 shrink-0 snap-center border ${selectedDate === index
+                    ? "bg-[#004fcb] border-[#004fcb] text-white shadow-md"
+                    : isToday
+                      ? "bg-white border-blue-200 text-gray-900 ring-1 ring-blue-100"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-blue-200"
+                    }`}
+                >
+                  {isToday ? (
+                    <span
+                      className={`flex flex-wrap align-bottom text-left mb-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-[0px_4px_12px_0px_rgba(0,0,0,0.15)] ${selectedDate === index ? "bg-white/20 text-white" : "bg-[#004fcb] text-white"}`}
+                      style={{ backgroundClip: 'unset', WebkitBackgroundClip: 'unset', backgroundImage: 'none' }}
+                    >
+                      Today
+                    </span>
+                  ) : (
+                    <span className={`text-[10px] font-semibold uppercase mb-0.5 ${selectedDate === index ? "text-blue-200" : "text-gray-400"}`}>
+                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    </span>
+                  )}
+                  <span className="text-lg sm:text-xl font-bold leading-none my-0.5 tabular-nums">
+                    {date.getDate()}
+                  </span>
+                  <span className={`text-[10px] font-semibold uppercase ${selectedDate === index ? "text-blue-200" : "text-gray-400"}`}>
+                    {date.toLocaleDateString('en-US', { month: 'short' })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => scrollCarousel('left')}
+              className="p-2 rounded-full bg-white shadow-md border border-gray-200 text-[#004fcb] hover:bg-[#004fcb] hover:text-white transition-all"
+            >
+              <ChevronLeft size={18} strokeWidth={2.5} />
             </button>
             <button
-              onClick={nextMonth}
-              className="p-1 rounded-md hover:bg-gray-100"
+              type="button"
+              onClick={() => scrollCarousel('right')}
+              className="p-2 rounded-full bg-white shadow-md border border-gray-200 text-[#004fcb] hover:bg-[#004fcb] hover:text-white transition-all"
             >
-              <ChevronRight size={16} className="text-gray-600" />
+              <ChevronRight size={18} strokeWidth={2.5} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Date Picker - Modern & Bold */}
-      <div className="relative group/carousel px-0 mt-4 mb-6">
-        {/* Floating Arrows - Always visible for better UX */}
-        <button
-          type="button"
-          onClick={() => scrollCarousel('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-30 p-2 rounded-full bg-white shadow-lg border border-gray-100 text-[#004fcb] hover:bg-[#004fcb] hover:text-white transition-all duration-300"
-        >
-          <ChevronLeft size={20} strokeWidth={2.5} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => scrollCarousel('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-30 p-2 rounded-full bg-white shadow-lg border border-gray-100 text-[#004fcb] hover:bg-[#004fcb] hover:text-white transition-all duration-300"
-        >
-          <ChevronRight size={20} strokeWidth={2.5} />
-        </button>
-
-        <div
-          ref={carouselRef}
-          className="flex gap-3 overflow-x-auto pb-4 pt-2 px-2 scrollbar-none no-scrollbar snap-x snap-mandatory scroll-smooth"
-        >
-          {dates.map((date, index) => {
-            const isToday = new Date().toDateString() === date.toDateString();
-            const isPast = false; // Already filtered
-
-            return (
-              <button
-                key={index}
-                data-active={selectedDate === index}
-                disabled={isPast}
-                onClick={() => {
-                  setSelectedDate(index);
-                  setSelectedSlot(null);
-                }}
-                className={`flex flex-col items-center py-4 px-5 rounded-2xl min-w-[85px] transition-all duration-300 shrink-0 snap-center relative border ${selectedDate === index
-                  ? "bg-[#004fcb] border-[#004fcb] text-white shadow-lg shadow-blue-900/20 scale-105 z-10"
-                  : isToday
-                    ? "bg-white border-blue-200 text-gray-900 shadow-sm ring-1 ring-blue-50"
-                    : "bg-white border-gray-100 text-gray-500 hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5"
-                  }`}
-              >
-                {isToday && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm whitespace-nowrap z-20 ${selectedDate === index ? "bg-white text-[#004fcb] border border-blue-100" : "bg-[#004fcb] text-white"
-                    }`}>
-                    Today
-                  </span>
-                )}
-                <span className={`text-[11px] font-bold uppercase tracking-widest mb-1.5 ${selectedDate === index ? "text-blue-100" : "text-gray-400"}`}>
-                  {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                </span>
-                <span className="text-2xl font-black leading-none mb-1.5 tracking-tight">
-                  {date.getDate()}
-                </span>
-                <span className={`text-[10px] font-bold uppercase ${selectedDate === index ? "text-blue-100" : "text-gray-400"}`}>
-                  {date.toLocaleDateString('en-US', { month: 'short' })}
-                </span>
-              </button>
-            );
-          })}
+      {/* ——— Pick a time ——— */}
+      <div className="border-t border-gray-100 pt-4 sm:pt-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pick a time</p>
+          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#004fcb] text-xs font-semibold border border-blue-100">
+            {currentSlots.length} slots
+          </span>
         </div>
-      </div>
 
-      {/* Slots Grid - Gen Z / Modern */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-          Available Times
-          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#004fcb] text-[10px] font-black border border-blue-100">{currentSlots.length}</span>
-        </h3>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1 pb-2">
+      <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1 pt-1 pb-3">
         {currentSlots.length > 0 ? (
           currentSlots.map((slot, index) => {
             const [start, end] = slot.time.split(' - ');
@@ -721,11 +738,11 @@ const BookSessionPage = () => {
                 key={index}
                 disabled={!slot.available}
                 onClick={() => setSelectedSlot(slot)}
-                className={`group relative flex flex-col items-center justify-center py-4 px-4 rounded-xl border transition-all duration-200 ${!slot.available
+                className={`group relative flex flex-col items-center justify-center py-3 px-3 rounded-xl border transition-all duration-200 ${!slot.available
                   ? "bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed"
                   : selectedSlot?.time === slot.time
                     ? "bg-[#004fcb] border-[#004fcb] text-white shadow-lg shadow-blue-600/20 scale-[1.02] ring-2 ring-blue-100"
-                    : "bg-white border-gray-200 text-gray-700 hover:border-[#004fcb] hover:shadow-md hover:-translate-y-0.5 hover:text-[#004fcb]"
+                    : "bg-white border-gray-200 text-gray-700 hover:border-[#004fcb] hover:shadow-md hover:text-[#004fcb]"
                   }`}
               >
                 {!slot.available && (
@@ -735,12 +752,10 @@ const BookSessionPage = () => {
                     </div>
                   </div>
                 )}
-                <div className={`flex flex-col items-center leading-none gap-1.5 ${!slot.available ? 'opacity-20 blur-[0.5px]' : ''}`}>
-                  <span className="text-sm font-black tracking-tight">
-                    {start}
-                  </span>
-                  <span className={`text-[10px] font-medium ${selectedSlot?.time === slot.time ? "text-blue-100" : "text-gray-400 group-hover:text-blue-400"}`}>
-                    To {end}
+                <div className={`flex flex-row items-center justify-center gap-2 ${!slot.available ? 'opacity-20 blur-[0.5px]' : ''}`}>
+                  <Clock className={`w-3.5 h-3.5 shrink-0 ${selectedSlot?.time === slot.time ? "text-blue-100" : "text-gray-400 group-hover:text-blue-400"}`} />
+                  <span className={`text-xs font-semibold tracking-tight whitespace-nowrap ${selectedSlot?.time === slot.time ? "text-white" : "text-gray-700 group-hover:text-[#004fcb]"}`}>
+                    {start} – {end}
                   </span>
                 </div>
               </button>
@@ -756,11 +771,12 @@ const BookSessionPage = () => {
           </div>
         )}
       </div>
+      </div>
 
       {/* Booking Actions */}
       <div className="border-t border-gray-100 pt-5">
         {selectedSlot ? (
-          <div className="mb-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+          <div className="mb-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
             <div className="flex justify-between items-start mb-2">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Selected Slot</span>
               <button onClick={() => setSelectedSlot(null)} className="text-[#004fcb] text-xs font-bold hover:underline">
@@ -775,7 +791,7 @@ const BookSessionPage = () => {
             </p>
           </div>
         ) : (
-          <p className="text-xs text-center text-gray-400 mb-4 px-4">
+          <p className="text-xs text-center text-gray-500 mb-4 px-4">
             Select an available time slot above to continue with your booking.
           </p>
         )}
@@ -783,8 +799,8 @@ const BookSessionPage = () => {
         <button
           onClick={() => setShowPayment(true)}
           disabled={!selectedSlot}
-          className={`w-full py-3.5 rounded-full font-bold transition-all flex items-center justify-center gap-2 group ${selectedSlot
-            ? "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md"
+          className={`w-full py-3.5 rounded-2xl font-extrabold transition-all flex items-center justify-center gap-2 group ${selectedSlot
+            ? "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md shadow-blue-900/10 active:scale-[0.99]"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
         >
@@ -813,13 +829,13 @@ const BookSessionPage = () => {
   );
 
   const MobileBookingFAB = () => (
-    <div className="lg:hidden fixed bottom-6 right-6 z-40">
+    <div className="lg:hidden fixed bottom-4 right-4 z-40">
       <button
         onClick={() => setShowMobileBooking(true)}
-        className="flex items-center gap-2 px-6 py-4 bg-[#004fcb] text-white rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all font-bold"
+        className="flex items-center gap-1.5 px-4 py-3 bg-[#004fcb] text-white rounded-full shadow-lg shadow-blue-900/20 hover:shadow-xl active:scale-95 transition-all font-bold text-sm"
       >
-        <Calendar className="w-5 h-5" />
-        Book Now
+        <Calendar className="w-4 h-4" />
+        Book
       </button>
     </div>
   );
@@ -829,10 +845,10 @@ const BookSessionPage = () => {
       <div className="min-h-screen bg-[#f3f2ef] pb-10">
         <Navigation />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-gray-500 hover:text-[#004fcb] font-medium mb-4 transition-colors w-fit"
+            className="inline-flex items-center gap-2 px-3 py-1.5 mb-4 rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-[#004fcb] hover:border-[#004fcb] hover:bg-blue-50 transition-colors text-sm font-semibold shadow-sm"
           >
             <ChevronLeft className="w-4 h-4" />
             Back to Home
@@ -842,24 +858,24 @@ const BookSessionPage = () => {
             <div className="lg:col-span-8 space-y-6">
               {ProfileHeader()}
 
-              {/* Tabs Section - Minimal Layout Shift */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm min-h-[500px]">
+              {/* Tabs Section */}
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm min-h-[520px]">
                 <div className="border-b border-gray-200">
-                  <div className="flex px-4">
+                <div className="flex px-3 sm:px-4 gap-2 pt-1">
                     <button
                       onClick={() => setActiveTab("details")}
-                      className={`px-6 py-4 font-bold text-sm transition-all relative ${activeTab === "details"
-                        ? "text-[#004fcb] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#004fcb]"
-                        : "text-gray-500 hover:bg-gray-50"
+                    className={`px-4 sm:px-5 py-3 font-extrabold text-xs sm:text-sm transition-all relative rounded-t-xl ${activeTab === "details"
+                        ? "text-[#004fcb] bg-blue-50/60 after:content-[''] after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-[#004fcb]"
+                        : "text-gray-600 hover:bg-gray-50"
                         }`}
                     >
                       About Session
                     </button>
                     <button
                       onClick={() => setActiveTab("reviews")}
-                      className={`px-6 py-4 font-bold text-sm transition-all relative ${activeTab === "reviews"
-                        ? "text-[#004fcb] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#004fcb]"
-                        : "text-gray-500 hover:bg-gray-50"
+                    className={`px-4 sm:px-5 py-3 font-extrabold text-xs sm:text-sm transition-all relative rounded-t-xl ${activeTab === "reviews"
+                        ? "text-[#004fcb] bg-blue-50/60 after:content-[''] after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-[#004fcb]"
+                        : "text-gray-600 hover:bg-gray-50"
                         }`}
                     >
                       Reviews & Ratings ({reviews.length})
@@ -872,31 +888,31 @@ const BookSessionPage = () => {
                     <div className="space-y-10 animate-fadeIn">
                       {/* Session Quick Stats */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
-                          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm text-[#004fcb]">
+                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <Timer className="w-6 h-6" />
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900">{sessionDuration}m</div>
-                            <div className="text-xs text-gray-500 font-medium">Session duration</div>
+                            <div className="font-extrabold text-gray-900 tabular-nums">{sessionDuration}m</div>
+                            <div className="text-xs text-gray-500 font-semibold">Session duration</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
-                          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm text-[#004fcb]">
+                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <Video className="w-6 h-6" />
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900">1:1 Video</div>
-                            <div className="text-xs text-gray-500 font-medium">Live interaction</div>
+                            <div className="font-extrabold text-gray-900">1:1 Video</div>
+                            <div className="text-xs text-gray-500 font-semibold">Live interaction</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
-                          <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm text-[#004fcb]">
+                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <CheckCircle className="w-6 h-6" />
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900">Customized</div>
-                            <div className="text-xs text-gray-500 font-medium">Tailored plan</div>
+                            <div className="font-extrabold text-gray-900">Customized</div>
+                            <div className="text-xs text-gray-500 font-semibold">Tailored plan</div>
                           </div>
                         </div>
                       </div>
@@ -907,10 +923,17 @@ const BookSessionPage = () => {
                           <Award className="w-5 h-5 text-gray-400" />
                           Areas of Expertise
                         </h4>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-3">
                           {profile.skills.map((skill, idx) => (
-                            <span key={idx} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-bold hover:border-[#004fcb] transition-colors cursor-default">
+                            <span key={idx} className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl text-sm font-bold hover:border-[#004fcb] hover:bg-blue-50/40 transition-colors cursor-default shadow-sm">
+                              <Zap className="w-4 h-4 text-amber-500 shrink-0" />
                               {skill}
+                            </span>
+                          ))}
+                          {["Mock Interviews", "Technical Round", "Behavioral"].map((label, idx) => (
+                            <span key={`extra-${idx}`} className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:border-[#004fcb] hover:bg-blue-50/40 transition-colors cursor-default">
+                              <Check className="w-4 h-4 text-green-600 shrink-0" />
+                              {label}
                             </span>
                           ))}
                         </div>
@@ -1107,17 +1130,17 @@ const BookSessionPage = () => {
         {/* Mobile Booking Sheet */}
         {showMobileBooking && (
           <div className="lg:hidden fixed inset-0 bg-black/60 z-[60] flex items-end animate-fadeIn">
-            <div className="bg-white w-full rounded-t-[32px] max-h-[85vh] overflow-y-auto animate-slideUp relative pb-10">
-              <div className="sticky top-0 bg-white/80 backdrop-blur-md items-center border-b border-gray-100 p-6 flex justify-between z-10">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Book Session</h3>
-                  <p className="text-xs text-gray-500 font-medium">with {profile.name}</p>
+            <div className="bg-white w-full rounded-t-[24px] sm:rounded-t-[32px] max-h-[90vh] overflow-y-auto animate-slideUp relative pb-10 shadow-2xl shadow-black/20">
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between z-10">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-extrabold text-gray-900 tracking-tight">Book Session</h3>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">with {profile.name}</p>
                 </div>
-                <button onClick={() => setShowMobileBooking(false)} className="p-2 bg-gray-50 rounded-full text-gray-500">
+                <button onClick={() => setShowMobileBooking(false)} className="p-2.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shrink-0" aria-label="Close">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-6">
+              <div className="px-4 py-4 pb-8">
                 {BookingCard()}
               </div>
             </div>
@@ -1142,7 +1165,7 @@ const BookSessionPage = () => {
               <div className="bg-gray-50 rounded-xl p-4 mb-8 border border-gray-100">
                 <div className="flex justify-between text-sm py-1">
                   <span className="text-gray-500 font-medium">Session Fee ({sessionDuration} mins)</span>
-                  <span className="text-gray-900 font-bold">₹{calculatedPrice}</span>
+                  <span className="text-gray-900 font-bold">{formatPrice(displayPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm py-1">
                   <span className="text-gray-500 font-medium">Service Tax</span>
@@ -1151,7 +1174,7 @@ const BookSessionPage = () => {
                 <div className="h-px bg-gray-200 my-2"></div>
                 <div className="flex justify-between text-base py-1">
                   <span className="text-gray-900 font-bold">Total Amount</span>
-                  <span className="text-[#004fcb] font-black">₹{calculatedPrice}</span>
+                  <span className="text-[#004fcb] font-bold">{formatPrice(displayPrice)}</span>
                 </div>
               </div>
 
