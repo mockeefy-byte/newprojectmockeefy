@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../lib/axios';
 
 // Default STUN servers as fallback
 const DEFAULT_ICE_SERVERS = [
@@ -19,12 +19,10 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const candidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
-    // 0. Fetch TURN Credentials
+    // 0. Fetch TURN Credentials from backend (uses VITE_API_URL / Render URL)
     useEffect(() => {
         const fetchIceServers = async () => {
             try {
-                // Check if we already have them or if env is missing
-                // Ideally this endpoint should always return an array
                 const res = await axios.get('/api/meetings/turn-credentials');
                 if (Array.isArray(res.data)) {
                     console.log("[WebRTC] Loaded TURN servers:", res.data.length);

@@ -72,6 +72,9 @@ const BookSessionSkeleton = () => (
 );
 
 const BookSessionPage = () => {
+  type SessionDuration = 30 | 60;
+  const isSessionDuration = (d: unknown): d is SessionDuration => d === 30 || d === 60;
+
   const [showPayment, setShowPayment] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -86,14 +89,14 @@ const BookSessionPage = () => {
   const [selectedSkill, setSelectedSkill] = useState<string>(skillOptions[0] || "General");
   const [expertLevel, setExpertLevel] = useState(existingProfile?.level || "Intermediate");
   // Only show durations the expert offers (30 and/or 60)
-  const durationOptions = useMemo(() => {
+  const durationOptions = useMemo<SessionDuration[]>(() => {
     const allowed = profile?.availability?.allowedDurations;
-    if (Array.isArray(allowed) && allowed.length > 0) return allowed.filter((d) => d === 30 || d === 60);
+    if (Array.isArray(allowed) && allowed.length > 0) return allowed.filter(isSessionDuration);
     const single = profile?.availability?.sessionDuration;
-    if (single === 30 || single === 60) return [single];
+    if (isSessionDuration(single)) return [single];
     return [30];
   }, [profile?.availability?.allowedDurations, profile?.availability?.sessionDuration]);
-  const [sessionDuration, setSessionDuration] = useState<number>(durationOptions[0] ?? 30);
+  const [sessionDuration, setSessionDuration] = useState<SessionDuration>(durationOptions[0] ?? 30);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
 
   // LinkedIn-style Profile Header
@@ -115,7 +118,7 @@ const BookSessionPage = () => {
     const opts = profile?.skills?.length ? profile.skills : (profile?.category ? [profile.category] : ["General"]);
     if (opts.length && !opts.includes(selectedSkill)) setSelectedSkill(opts[0]);
     const dur = profile?.availability?.allowedDurations?.length ? profile.availability.allowedDurations : (profile?.availability?.sessionDuration ? [profile.availability.sessionDuration] : [30]);
-    const validDur = dur.filter((d) => d === 30 || d === 60);
+    const validDur = dur.filter(isSessionDuration);
     if (validDur.length && !validDur.includes(sessionDuration)) setSessionDuration(validDur[0]);
   }, [profile]);
   const [loading, setLoading] = useState(!existingProfile || !existingProfile.availability);
@@ -607,7 +610,10 @@ const BookSessionPage = () => {
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Duration</label>
             <select
               value={durationOptions.includes(sessionDuration) ? sessionDuration : durationOptions[0]}
-              onChange={(e) => setSessionDuration(Number(e.target.value))}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (isSessionDuration(next)) setSessionDuration(next);
+              }}
               className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
             >
               {durationOptions.includes(30) && <option value={30}>30 Minutes</option>}
@@ -729,35 +735,60 @@ const BookSessionPage = () => {
           </span>
         </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1 pt-1 pb-3">
+      <div className="grid grid-cols-1 gap-2 sm:gap-3 max-h-[320px] sm:max-h-[380px] lg:max-h-[400px] overflow-y-auto overflow-x-hidden pt-1 pb-3">
         {currentSlots.length > 0 ? (
           currentSlots.map((slot, index) => {
-            const [start, end] = slot.time.split(' - ');
+            const isSelected = selectedSlot?.time === slot.time;
+            const isUnavailable = slot.available === false;
+            const timeParts = (slot.time || "").split(/\s*[-–]\s*/);
+            const startRaw = timeParts[0]?.trim() ?? "";
+            const endRaw = timeParts[1]?.trim() ?? "";
+            const compact = (t: string) => t.replace(/^0(\d)/, "$1");
+            const start = compact(startRaw);
+            const end = compact(endRaw);
+            // Same format for every slot: "1:00–1:30 PM" or "12:00–12:30 AM"
+            const timeLabel = (() => {
+              if (!start || !end) return slot.time || "—";
+              const s = start.match(/^(.+?)\s*(AM|PM)$/i);
+              const e = end.match(/^(.+?)\s*(AM|PM)$/i);
+              const sTime = s ? s[1]!.trim() : start;
+              const eTime = e ? e[1]!.trim() : end;
+              const sMer = (s && s[2]) ? s[2].toUpperCase() : (e && e[2]) ? e[2].toUpperCase() : "";
+              const eMer = (e && e[2]) ? e[2].toUpperCase() : sMer;
+              if (sMer && eMer) {
+                return sMer === eMer ? `${sTime}–${eTime} ${eMer}` : `${sTime} ${sMer}–${eTime} ${eMer}`;
+              }
+              return `${start}–${end}`;
+            })();
             return (
               <button
                 key={index}
-                disabled={!slot.available}
+                type="button"
+                disabled={isUnavailable}
                 onClick={() => setSelectedSlot(slot)}
-                className={`group relative flex flex-col items-center justify-center py-3 px-3 rounded-xl border transition-all duration-200 ${!slot.available
-                  ? "bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed"
-                  : selectedSlot?.time === slot.time
-                    ? "bg-[#004fcb] border-[#004fcb] text-white shadow-lg shadow-blue-600/20 scale-[1.02] ring-2 ring-blue-100"
-                    : "bg-white border-gray-200 text-gray-700 hover:border-[#004fcb] hover:shadow-md hover:text-[#004fcb]"
+                className={`group relative flex flex-row items-center justify-center gap-2 w-full min-h-[44px] py-3 px-4 rounded-lg border-2 transition-all duration-200 outline-none focus:ring-2 focus:ring-[#004fcb]/30 focus:ring-offset-1 box-border ${isUnavailable
+                  ? "bg-gray-50 border-gray-200 cursor-not-allowed opacity-80"
+                  : isSelected
+                    ? "bg-[#004fcb] border-[#004fcb] text-white shadow-lg shadow-blue-600/20 ring-2 ring-blue-100 ring-offset-1"
+                    : "bg-white border-gray-200 text-gray-700 hover:border-[#004fcb] hover:bg-blue-50/50 hover:text-[#004fcb] active:scale-[0.98]"
                   }`}
               >
-                {!slot.available && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-xl z-20">
-                    <div className="bg-gray-100/90 px-2 py-1 rounded text-[10px] font-bold text-gray-400 uppercase tracking-wider border border-gray-200">
+                <span className="flex flex-row items-center justify-center gap-2 flex-1">
+                  <Clock className={`w-4 h-4 flex-shrink-0 ${isSelected ? "text-blue-100" : "text-gray-500 group-hover:text-[#004fcb]"}`} strokeWidth={2} aria-hidden />
+                  <span
+                    className={`text-sm font-semibold tracking-tight whitespace-nowrap text-center tabular-nums ${isSelected ? "text-white" : "text-gray-700 group-hover:text-[#004fcb]"}`}
+                    title={slot.time}
+                  >
+                    {timeLabel}
+                  </span>
+                </span>
+                {isUnavailable && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl z-10 bg-gray-50/95" aria-hidden>
+                    <span className="bg-gray-200 px-2 py-0.5 rounded text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                       Unavailable
-                    </div>
+                    </span>
                   </div>
                 )}
-                <div className={`flex flex-row items-center justify-center gap-2 ${!slot.available ? 'opacity-20 blur-[0.5px]' : ''}`}>
-                  <Clock className={`w-3.5 h-3.5 shrink-0 ${selectedSlot?.time === slot.time ? "text-blue-100" : "text-gray-400 group-hover:text-blue-400"}`} />
-                  <span className={`text-xs font-semibold tracking-tight whitespace-nowrap ${selectedSlot?.time === slot.time ? "text-white" : "text-gray-700 group-hover:text-[#004fcb]"}`}>
-                    {start} – {end}
-                  </span>
-                </div>
               </button>
             );
           })
