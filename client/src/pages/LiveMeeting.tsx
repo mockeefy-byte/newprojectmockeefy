@@ -90,9 +90,9 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
       setParticipants(["You"]);
     },
     onMeetingEnded: () => {
-      toast.info("Meeting has been ended by the host.");
+      toast.info("The meeting has ended. You will be redirected.", { duration: 4000 });
       cleanup();
-      onLeave();
+      setTimeout(() => onLeave(), 800);
     },
     isMediaReady: !!localStream
   });
@@ -153,8 +153,9 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
   const handleEndMeeting = () => {
     if (confirm("End meeting for everyone?")) {
       endCall();
+      toast.info("Meeting ended. Redirecting...", { duration: 3000 });
       cleanup();
-      onLeave();
+      setTimeout(() => onLeave(), 500);
     }
   };
 
@@ -166,16 +167,18 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
   };
 
   const handleRetryConnection = () => {
-    toast.loading("Retrying connection...");
+    // Show a short info message instead of an endless loading toast
+    toast("Retrying connection...", { duration: 2500 });
+
     resetPeerConnection();
-    // Re-trigger offer creation if expert
+
+    // Re-trigger offer creation if expert; candidate just waits
     if (role === 'expert') {
       setTimeout(() => {
         hasOfferedRef.current = false;
         setIsBothReady(true); // Re-trigger effect
       }, 500);
     } else {
-      // Candidate just waits
       setStatus("Waiting for Host to reconnect...");
     }
   };
@@ -515,11 +518,13 @@ export default function LiveMeetingPage() {
     null;
   const role = searchParams.get('role') || (user as any)?.role || (location.state as any)?.role;
 
-  // Business logic: never open meeting if session is completed or expired
+  // Business logic: expired only after endTime (e.g. 2:00–2:30 → expire after 2:30, not at 2:00)
+  const now = new Date();
   const isSessionEndedOrExpired = sessionFromState && (
     sessionFromState.status === 'Completed' ||
     sessionFromState.status === 'Cancelled' ||
-    (sessionFromState.startTime && new Date(sessionFromState.startTime) < new Date())
+    (sessionFromState.endTime && new Date(sessionFromState.endTime) < now) ||
+    (!sessionFromState.endTime && sessionFromState.startTime && new Date(sessionFromState.startTime) < now)
   );
 
   useEffect(() => {

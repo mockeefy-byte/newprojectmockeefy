@@ -63,7 +63,7 @@ const RecommendedMentors = () => {
             avatar: getProfileImageUrl(e.profileImage),
             activeTime: `${Math.floor(Math.random() * 5) + 1}d ago`,
             isVerified: e.status === "Active",
-            price: e.price ? `₹${e.price}` : "₹500",
+            price: typeof e.price === "number" ? `₹${e.price}` : "₹—",
             skills: e.skillsAndExpertise?.domains || [],
             experience: exp,
             totalSessions: e.metrics?.totalSessions || 0,

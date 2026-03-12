@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL, SOCKET_URL } from '../../config';
 
 interface SignalingProps {
     meetingId: string;
@@ -37,12 +37,16 @@ export function useSignaling({
             return;
         }
 
-        console.log(`[useSignaling] Connecting to socket at: ${API_BASE_URL}`);
+        const socketServerUrl = SOCKET_URL || API_BASE_URL;
+        console.log(`[useSignaling] Connecting to socket at: ${socketServerUrl}`);
 
-        const socket = io(API_BASE_URL, {
+        const socket = io(socketServerUrl, {
             query: { userId, meetingId },
-            transports: ['websocket', 'polling'], // Prioritize websocket
-            // reconnectionAttempts: 5, // Default is usually fine
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 20000,
         });
 
         socketRef.current = socket;
@@ -82,8 +86,8 @@ export function useSignaling({
             onUserLeft(leftUserId);
         });
 
-        socket.on("meeting-ended", () => {
-            console.log("Meeting ended by host");
+        socket.on("meeting-ended", (payload?: { meetingId?: string }) => {
+            console.log("[useSignaling] Meeting ended (notification from server)", payload?.meetingId || "");
             onMeetingEnded();
         });
 

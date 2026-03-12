@@ -177,7 +177,7 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
                 <div>
                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Session Fee</p>
                     <div className="flex items-center gap-1">
-                        <span className="text-[18px] font-black text-elite-black tracking-tight">{mentor.price || "₹499"}</span>
+                        <span className="text-[18px] font-black text-elite-black tracking-tight">{mentor.price || "₹—"}</span>
                     </div>
                 </div>
                 <button

@@ -31,17 +31,22 @@ export const createCategory = async (req, res) => {
     }
 };
 
-// Update a category
+// Update a category (only provided fields; amount = base price for 30 min)
 export const updateCategory = async (req, res) => {
     const { id } = req.params;
     const { name, description, icon, type, amount, status } = req.body;
 
     try {
-        const updatedCategory = await Category.findByIdAndUpdate(
-            id,
-            { name, description, icon, type, amount, status },
-            { new: true }
-        );
+        const update = {};
+        if (name !== undefined) update.name = name;
+        if (description !== undefined) update.description = description;
+        if (icon !== undefined) update.icon = icon;
+        if (type !== undefined) update.type = type;
+        if (amount !== undefined) update.amount = amount === "" || amount === null ? null : Number(amount);
+        if (status !== undefined) update.status = status;
+
+        const updatedCategory = await Category.findByIdAndUpdate(id, update, { new: true });
+        if (!updatedCategory) return res.status(404).json({ message: "Category not found" });
         res.status(200).json(updatedCategory);
     } catch (error) {
         res.status(400).json({ message: error.message });

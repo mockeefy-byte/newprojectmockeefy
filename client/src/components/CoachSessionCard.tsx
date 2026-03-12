@@ -75,7 +75,7 @@ export default function CoachSessionCard() {
         reviews: expert.metrics?.totalReviews || 0,
         avatar: getProfileImageUrl(expert.profileImage),
         isVerified: expert.status === "Active",
-        price: expert.price ? `₹${expert.price}` : "₹500",
+        price: typeof expert.price === "number" ? `₹${expert.price}` : "₹—",
         skills: skills,
         experience: exp,
         activeTime: expert.availability?.nextAvailable || "Available Today",

@@ -9,6 +9,7 @@ import ExpertDetails from "./models/expertModel.js";
 import Category from "./models/Category.js";
 import Skill from "./models/Skill.js";
 import Session from "./models/Session.js";
+import { categoriesData, skillsData } from "./data/categoriesAndSkills.js";
 
 // Load env
 const __filename = fileURLToPath(import.meta.url);
@@ -16,32 +17,6 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, ".env") });
 
 const MONGO_URI = process.env.MONGO_URI;
-
-const categoriesData = [
-    { name: "IT", description: "Information Technology" },
-    { name: "HR", description: "Human Resources" },
-    { name: "Business", description: "Business Administration" },
-    { name: "Design", description: "Graphic and UI/UX Design" },
-    { name: "Marketing", description: "Digital and Traditional Marketing" },
-    { name: "Finance", description: "Finance and Accounting" },
-    { name: "AI", description: "Artificial Intelligence and ML" },
-    { name: "Legal", description: "Legal Services" },
-    { name: "Medical", description: "Healthcare and Medicine" },
-    { name: "Creative", description: "Creative Arts" },
-];
-
-const skillsData = {
-    "IT": ["JavaScript", "Python", "React", "Node.js", "Java", "C++", "AWS", "Docker"],
-    "HR": ["Recruitment", "Employee Relations", "Payroll", "Conflict Resolution"],
-    "Business": ["Project Management", "Business Analysis", "Strategic Planning", "Leadership"],
-    "Design": ["Photoshop", "Figma", "Illustrator", "UI Design", "UX Research"],
-    "Marketing": ["SEO", "Content Marketing", "Social Media", "Email Marketing", "Google Ads"],
-    "Finance": ["Financial Analysis", "Accounting", "Taxation", "Investment Banking"],
-    "AI": ["Machine Learning", "Deep Learning", "NLP", "TensorFlow", "PyTorch"],
-    "Legal": ["Corporate Law", "Intellectual Property", "Contract Law"],
-    "Medical": ["General Medicine", "Pediatrics", "Surgery"],
-    "Creative": ["Writing", "Music Production", "Video Editing"]
-};
 
 // Helpers
 const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];

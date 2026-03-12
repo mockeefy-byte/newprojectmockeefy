@@ -155,16 +155,16 @@ const BookSessionPage = () => {
     }
   }, [expertId]);
 
-  // Dynamic price: skill + expert + duration (only 30 or 60 min; uses expert's level from backend)
+  // Price is category-based only (expert's category + level + duration). No skill.
   useEffect(() => {
     const fetchPrice = async () => {
-      if (!profile?.id || !selectedSkill || ![30, 60].includes(sessionDuration)) {
+      if (!profile?.id || ![30, 60].includes(sessionDuration)) {
         setCalculatedPrice(0);
         return;
       }
       try {
         const res = await axios.get("/api/pricing/calculate-price", {
-          params: { skill: selectedSkill, expertId: profile.id, duration: sessionDuration }
+          params: { expertId: profile.id, duration: sessionDuration, level: expertLevel }
         });
         if (res.data?.finalPrice != null) {
           setCalculatedPrice(res.data.finalPrice);
@@ -177,7 +177,7 @@ const BookSessionPage = () => {
       }
     };
     fetchPrice();
-  }, [profile?.id, selectedSkill, sessionDuration]);
+  }, [profile?.id, sessionDuration, expertLevel]);
 
 
   const [currentMonth, setCurrentMonth] = useState(new Date());

@@ -44,6 +44,7 @@ interface Verification {
 
 interface Expert {
     _id: string;
+    price?: number;
     personalInformation: PersonalInformation;
     education: Education[];
     professionalDetails: ProfessionalDetails;
@@ -166,6 +167,7 @@ const PendingExpertsTable: React.FC = () => {
         <tr className="animate-pulse border-b border-gray-100/50">
             <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-32"></div><div className="h-3 bg-gray-100 rounded w-24 mt-2"></div></td>
             <td className="px-6 py-4"><div className="h-5 bg-gray-200 rounded-full w-24"></div></td>
+            <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
             <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-28"></div></td>
             <td className="px-6 py-4 text-right"><div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div></td>
         </tr>
@@ -209,6 +211,7 @@ const PendingExpertsTable: React.FC = () => {
                         <tr>
                             <th className="py-4 px-6 font-medium text-gray-500 text-xs uppercase tracking-wider">Expert Name</th>
                             <th className="py-4 px-6 font-medium text-gray-500 text-xs uppercase tracking-wider">Category</th>
+                            <th className="py-4 px-6 font-medium text-gray-500 text-xs uppercase tracking-wider">Amount (30 min)</th>
                             <th className="py-4 px-6 font-medium text-gray-500 text-xs uppercase tracking-wider">Location</th>
                             <th className="py-4 px-6 font-medium text-gray-500 text-xs uppercase tracking-wider text-right">Actions</th>
                         </tr>
@@ -231,6 +234,12 @@ const PendingExpertsTable: React.FC = () => {
                                             {exp.personalInformation.category || exp.professionalDetails.industry}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4">
+                                        <span className="font-semibold text-gray-900 tabular-nums">
+                                            {typeof exp.price === "number" && Number.isFinite(exp.price) ? `₹${exp.price}` : "—"}
+                                        </span>
+                                        <span className="ml-2 text-[11px] text-gray-500">INR</span>
+                                    </td>
                                     <td className="px-6 py-4 text-gray-600">
                                         {exp.personalInformation.city}, {exp.personalInformation.state}
                                     </td>
@@ -249,7 +258,7 @@ const PendingExpertsTable: React.FC = () => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="py-20 text-center text-gray-500">
+                                <td colSpan={5} className="py-20 text-center text-gray-500">
                                     No pending experts found.
                                 </td>
                             </tr>

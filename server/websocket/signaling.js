@@ -1,5 +1,6 @@
 import * as meetingService from '../services/meetingService.js';
 import * as authUtils from '../utils/authorization.js';
+import Session from '../models/Session.js';
 
 // In-Memory map for quick socket lookups
 // map<meetingId, { expertSocket, candidateSocket }>
@@ -107,14 +108,20 @@ export default function attachSignaling(io) {
       });
     });
 
-    // Meeting Controls
+    // Meeting Controls: when expert or candidate ends the meeting, everyone gets notified
     socket.on("end-call", async ({ meetingId }) => {
-
-
-      // Update DB
-      await meetingService.updateMeetingStatus(meetingId, "finished");
-
-      io.to(meetingId).emit("meeting-ended");
+      if (!meetingId) return;
+      try {
+        await meetingService.updateMeetingStatus(meetingId, "finished");
+        await Session.findOneAndUpdate(
+          { sessionId: meetingId },
+          { status: "completed" },
+          { new: true }
+        );
+      } catch (err) {
+        console.error("[Signaling] end-call DB update error:", err);
+      }
+      io.to(meetingId).emit("meeting-ended", { meetingId, endedBy: socket.id });
       liveRooms.delete(meetingId);
       io.in(meetingId).socketsLeave(meetingId);
     });

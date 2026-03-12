@@ -2,8 +2,7 @@ import * as sessionService from '../services/sessionService.js';
 import * as meetingService from '../services/meetingService.js';
 import PricingRule from '../models/PricingRule.js';
 import ExpertDetails from '../models/expertModel.js';
-import * as priceCalculationService from '../services/priceCalculationService.js';
-import { v4 as uuidv4 } from 'uuid'; // Ensure you have uuid or use crypto
+import { v4 as uuidv4 } from 'uuid';
 
 export const createSession = async (req, res) => {
     try {
@@ -23,40 +22,34 @@ export const createSession = async (req, res) => {
             return res.status(404).json({ success: false, message: "Expert not found" });
         }
 
-        // --- STRICT PRICING ENFORCEMENT ---
-        let finalPrice = 0;
+        // --- PRICING: category-based only (no skill). Uses PricingRule: category + level + duration ---
+        const categoryName = expert.personalInformation?.category || "IT";
+        const selectedLevel = level || expert.professionalDetails?.level || "Intermediate";
 
-        // 1) Dynamic pricing: skill + expert + duration (30 or 60) → basePrice30 * levelMultiplier * durationMultiplier
-        if (skill && [30, 60].includes(durationMinutes)) {
-            const result = await priceCalculationService.calculateBookingPrice(skill, expertId, durationMinutes);
-            if (!result.error) finalPrice = result.finalPrice;
+        const Category = (await import('../models/Category.js')).default;
+        const catDoc = await Category.findOne({ name: categoryName });
+        if (!catDoc) {
+            return res.status(400).json({ success: false, message: `Category '${categoryName}' not configured in system.` });
         }
 
-        // 2) Fallback: legacy PricingRule by category + level + duration
-        if (finalPrice === 0) {
-            const categoryName = expert.personalInformation?.category || "IT";
-            const selectedLevel = level || expert.professionalDetails?.level || "Intermediate";
-
-            const Category = (await import('../models/Category.js')).default;
-            const catDoc = await Category.findOne({ name: categoryName });
-
-            if (!catDoc) {
-                return res.status(400).json({ success: false, message: `Category '${categoryName}' not configured in system.` });
-            }
-
-            const pricingRule = await PricingRule.findOne({
-                categoryId: catDoc._id,
-                skillId: null,
-                level: selectedLevel,
-                duration: Number(durationMinutes)
-            });
-
-            if (!pricingRule) {
-                return res.status(400).json({ success: false, message: `Pricing not configured for ${categoryName} - ${selectedLevel} - ${durationMinutes}mins.` });
-            }
+        let finalPrice = null;
+        const pricingRule = await PricingRule.findOne({
+            categoryId: catDoc._id,
+            skillId: null,
+            level: selectedLevel,
+            duration: Number(durationMinutes),
+        });
+        if (pricingRule) {
             finalPrice = pricingRule.price;
+        } else if (catDoc.amount != null && catDoc.amount >= 0) {
+            finalPrice = durationMinutes === 30 ? catDoc.amount : Math.round(catDoc.amount * 1.8);
         }
-        // ----------------------------------
+        if (finalPrice == null) {
+            return res.status(400).json({
+                success: false,
+                message: `Pricing not configured for ${categoryName} - ${selectedLevel} - ${durationMinutes} mins. Set base in Admin → Categories or rules in Admin → Pricing.`,
+            });
+        }
 
         const sessionData = {
             sessionId,
@@ -269,9 +262,12 @@ export const getSessionsByCandidate = async (req, res) => {
                     expertName = lookupId;
                 }
 
-                // Match Review - Expert's review for this session
+                // Match Review - Expert's review (marks/feedback for candidate) and Candidate's review
                 const ReviewDetails = (await import('../models/reviewModel.js')).default;
-                const expertReview = await ReviewDetails.findOne({ sessionId: session.sessionId, reviewerRole: 'expert' });
+                const [expertReview, candidateReview] = await Promise.all([
+                    ReviewDetails.findOne({ sessionId: session.sessionId, reviewerRole: 'expert' }),
+                    ReviewDetails.findOne({ sessionId: session.sessionId, reviewerRole: 'candidate' })
+                ]);
 
                 return {
                     ...session.toObject(),
@@ -282,6 +278,14 @@ export const getSessionsByCandidate = async (req, res) => {
                         strengths: expertReview.strengths,
                         weaknesses: expertReview.weaknesses,
                         feedback: expertReview.feedback
+                    } : null,
+                    candidateReview: candidateReview ? {
+                        overallRating: candidateReview.overallRating,
+                        technicalRating: candidateReview.technicalRating,
+                        communicationRating: candidateReview.communicationRating,
+                        strengths: candidateReview.strengths,
+                        weaknesses: candidateReview.weaknesses,
+                        feedback: candidateReview.feedback
                     } : null,
                     expertDetails: {
                         name: expertName,

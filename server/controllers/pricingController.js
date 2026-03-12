@@ -1,6 +1,5 @@
 import PricingRule from "../models/PricingRule.js";
 import Category from "../models/Category.js";
-import * as priceCalculationService from "../services/priceCalculationService.js";
 import Skill from "../models/Skill.js";
 
 /* -------------------- Bulk Upsert Pricing Rules -------------------- */
@@ -107,30 +106,67 @@ export const calculatePrice = async (req, res) => {
     }
 };
 
-/* -------------------- GET /calculate-price (dynamic: skill + expert + duration) -------------------- */
+/* -------------------- GET /calculate-price (category-based only: expert + duration + level) -------------------- */
 export const getCalculatePrice = async (req, res) => {
     try {
-        const { skill, expertId, duration } = req.query;
-        if (!skill || !expertId || !duration) {
+        const { expertId, duration, level: levelOverride } = req.query;
+        if (!expertId || !duration) {
             return res.status(400).json({
                 success: false,
-                message: "Missing required query params: skill, expertId, duration",
+                message: "Missing required query params: expertId, duration",
             });
         }
-        const result = await priceCalculationService.calculateBookingPrice(skill, expertId, duration);
-        if (result.error) {
-            const status = result.error === "Skill not found" || result.error === "Expert not found" ? 404 : 400;
-            return res.status(status).json({ success: false, message: result.error });
+        const durationNum = Number(duration);
+        if (![30, 60].includes(durationNum)) {
+            return res.status(400).json({ success: false, message: "Duration must be 30 or 60" });
         }
+
+        const ExpertDetails = (await import("../models/expertModel.js")).default;
+        const expert = await ExpertDetails.findOne({
+            $or: [{ _id: expertId }, { userId: expertId }],
+        }).lean();
+        if (!expert) {
+            return res.status(404).json({ success: false, message: "Expert not found" });
+        }
+
+        const categoryName = expert.personalInformation?.category || expert.category || "IT";
+        const level = (levelOverride && String(levelOverride).trim()) ||
+            expert.professionalDetails?.level ||
+            expert.adminMappings?.level ||
+            "Intermediate";
+
+        const catDoc = await Category.findOne({ name: categoryName });
+        if (!catDoc) {
+            return res.status(404).json({ success: false, message: `Category '${categoryName}' not found` });
+        }
+
+        let finalPrice = null;
+        const priceRule = await PricingRule.findOne({
+            categoryId: catDoc._id,
+            skillId: null,
+            level: String(level).trim(),
+            duration: durationNum,
+        });
+        if (priceRule) {
+            finalPrice = priceRule.price;
+        } else if (catDoc.amount != null && catDoc.amount >= 0) {
+            // Fallback to category base price (set in Admin → Categories)
+            finalPrice = durationNum === 30 ? catDoc.amount : Math.round(catDoc.amount * 1.8);
+        }
+        if (finalPrice == null) {
+            return res.status(404).json({
+                success: false,
+                message: `Pricing not configured for category ${categoryName}, level ${level}, ${durationNum} min. Set base in Admin → Categories or rules in Admin → Pricing.`,
+            });
+        }
+
         res.json({
             success: true,
-            basePrice: result.basePrice,
-            expertLevel: result.expertLevel,
-            duration: result.duration,
-            finalPrice: result.finalPrice,
-            skillName: result.skillName,
-            levelMultiplier: result.levelMultiplier,
-            durationMultiplier: result.durationMultiplier,
+            finalPrice,
+            currency: priceRule?.currency || "INR",
+            category: categoryName,
+            level: String(level),
+            duration: durationNum,
         });
     } catch (error) {
         console.error("Get Calculate Price Error:", error);

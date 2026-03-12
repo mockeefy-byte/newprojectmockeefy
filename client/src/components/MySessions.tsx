@@ -13,14 +13,26 @@ import {
   Award,
   Bookmark,
   Check,
-  Star
+  Star,
+  X,
+  MessageSquare
 } from "lucide-react";
+import { toast } from "sonner";
 import DashboardLayout from "./DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import axios from '../lib/axios';
 import { getProfileImageUrl } from "../lib/imageUtils";
 
 // --- Types ---
+type ReviewInfo = {
+  overallRating?: number;
+  technicalRating?: number;
+  communicationRating?: number;
+  feedback?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+};
+
 type Session = {
   id: string;
   sessionId: string;
@@ -35,7 +47,12 @@ type Session = {
   meetLink?: string;
   profileImage?: string | null;
   startTime?: string;
+  endTime?: string;
   category?: string;
+  expertId?: string;
+  candidateId?: string;
+  expertReview?: ReviewInfo | null;
+  candidateReview?: ReviewInfo | null;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -54,17 +71,26 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-/** Session is joinable only if not completed/cancelled and start time is in the future. */
+/** Session is joinable from startTime until endTime (e.g. 2:00–2:30 → joinable until 2:30). */
 function canJoinSession(session: Session): boolean {
   if (['Completed', 'Cancelled'].includes(session.status)) return false;
-  if (!session.startTime) return true; // no date = allow join for now
-  return new Date(session.startTime) > new Date();
+  const now = new Date();
+  const start = session.startTime ? new Date(session.startTime) : null;
+  const end = session.endTime ? new Date(session.endTime) : null;
+  if (!start) return true;
+  if (now < start) return false; // not started yet
+  if (end && now > end) return false; // already ended → expire after endTime only
+  return true; // now >= start && (no end || now <= end)
 }
 
-/** Display status: show Expired when date passed but not completed. */
+/** Expired only after endTime (e.g. 2:00–2:30 → Expired only after 2:30). */
 function getDisplayStatus(session: Session): string {
   if (session.status === 'Completed' || session.status === 'Cancelled') return session.status;
-  if (session.startTime && new Date(session.startTime) < new Date()) return 'Expired';
+  const now = new Date();
+  const end = session.endTime ? new Date(session.endTime) : null;
+  const start = session.startTime ? new Date(session.startTime) : null;
+  if (end && now > end) return 'Expired';
+  if (start && now >= start && (!end || now <= end)) return 'Live';
   return session.status;
 }
 
@@ -86,6 +112,10 @@ const MySessions = () => {
   }, [location.search]);
 
   const [savedExperts, setSavedExperts] = useState<any[]>([]);
+  const [reviewModalSession, setReviewModalSession] = useState<Session | null>(null);
+  const [certificateModalSession, setCertificateModalSession] = useState<Session | null>(null);
+  const [reviewForm, setReviewForm] = useState({ overallRating: 5, technicalRating: 5, communicationRating: 5, feedback: "" });
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchSessions = async () => {
     if (!user?.id) return;
@@ -100,9 +130,14 @@ const MySessions = () => {
           profileImage: s.expertDetails?.profileImage,
           category: s.category || 'Interview',
           startTime: s.startTime,
+          endTime: s.endTime,
           time: new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: s.status.charAt(0).toUpperCase() + s.status.slice(1),
-          score: s.expertReview?.overallRating ? s.expertReview.overallRating * 20 : undefined
+          status: (s.status || '').charAt(0).toUpperCase() + (s.status || '').slice(1),
+          score: s.expertReview?.overallRating != null ? s.expertReview.overallRating * 20 : undefined,
+          expertId: s.expertId,
+          candidateId: s.candidateId,
+          expertReview: s.expertReview || null,
+          candidateReview: s.candidateReview || null
         }));
         setSessions(mapped);
       }
@@ -135,6 +170,32 @@ const MySessions = () => {
 
   const handleJoin = (session: Session) => {
     navigate(`/live-meeting/${session.sessionId}`, { state: { session } });
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewModalSession || !user?.id) return;
+    setSubmittingReview(true);
+    try {
+      await axios.post(`/api/sessions/${reviewModalSession.sessionId}/review`, {
+        overallRating: reviewForm.overallRating,
+        technicalRating: reviewForm.technicalRating,
+        communicationRating: reviewForm.communicationRating,
+        feedback: reviewForm.feedback,
+        strengths: [],
+        weaknesses: [],
+        expertId: reviewModalSession.expertId,
+        candidateId: reviewModalSession.candidateId || user.id,
+        reviewerRole: "candidate"
+      });
+      toast.success("Review submitted. You can now view your certificate details.");
+      setReviewModalSession(null);
+      setReviewForm({ overallRating: 5, technicalRating: 5, communicationRating: 5, feedback: "" });
+      fetchSessions();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   return (
@@ -259,13 +320,23 @@ const MySessions = () => {
                             <td className="px-5 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 {displayStatus === 'Completed' ? (
-                                  <button
-                                    title="Download Certificate"
-                                    className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 hover:text-elite-blue hover:border-blue-200 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
-                                  >
-                                    <Award size={12} strokeWidth={2.5} />
-                                    <span>Certificate</span>
-                                  </button>
+                                  session.candidateReview ? (
+                                    <button
+                                      onClick={() => setCertificateModalSession(session)}
+                                      className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 hover:text-elite-blue hover:border-blue-200 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
+                                    >
+                                      <Award size={12} strokeWidth={2.5} />
+                                      <span>View Certificate</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => setReviewModalSession(session)}
+                                      className="px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
+                                    >
+                                      <MessageSquare size={12} strokeWidth={2.5} />
+                                      <span>Give Review</span>
+                                    </button>
+                                  )
                                 ) : joinable ? (
                                   <button
                                     onClick={() => handleJoin(session)}
@@ -321,9 +392,15 @@ const MySessions = () => {
                             <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                               <StatusBadge status={displayStatus} />
                               {displayStatus === 'Completed' ? (
-                                <button className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1.5">
-                                  <Award size={12} /> Certificate
-                                </button>
+                                session.candidateReview ? (
+                                  <button onClick={() => setCertificateModalSession(session)} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                                    <Award size={12} /> View Certificate
+                                  </button>
+                                ) : (
+                                  <button onClick={() => setReviewModalSession(session)} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                                    <MessageSquare size={12} /> Give Review
+                                  </button>
+                                )
                               ) : joinable ? (
                                 <button
                                   onClick={() => handleJoin(session)}
@@ -513,6 +590,85 @@ const MySessions = () => {
             <Briefcase className="w-10 h-10 text-slate-100 mx-auto mb-4" />
             <p className="text-slate-500 text-[10px] font-black tracking-tight">Intel Core "{activeView}" Encrypted</p>
             <button onClick={() => setActiveView('overview')} className="mt-8 px-8 py-2.5 bg-elite-blue text-white rounded-xl text-[10px] font-black tracking-tight hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/10">Return to Nexus</button>
+          </div>
+        )}
+
+        {/* Give Review Modal (candidate) — only after meeting ended; then they can view certificate */}
+        {reviewModalSession && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">Give your review</h3>
+                <button onClick={() => setReviewModalSession(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600">Session with <strong>{reviewModalSession.expert}</strong>. Your feedback helps improve the experience.</p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">Overall rating (1–5)</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} type="button" onClick={() => setReviewForm((f) => ({ ...f, overallRating: star }))} className="p-1">
+                        <Star size={24} className={star <= reviewForm.overallRating ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Feedback (optional)</label>
+                  <textarea value={reviewForm.feedback} onChange={(e) => setReviewForm((f) => ({ ...f, feedback: e.target.value }))} placeholder="How was the session?" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" rows={3} />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
+                <button onClick={() => setReviewModalSession(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-medium">Cancel</button>
+                <button onClick={handleSubmitReview} disabled={submittingReview} className="px-4 py-2 bg-elite-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-60">{submittingReview ? "Submitting…" : "Submit review"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Certificate Modal — expert feedback (marks) and certificate details */}
+        {certificateModalSession && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2"><Award size={20} className="text-elite-blue" /> Certificate details</h3>
+                <button onClick={() => setCertificateModalSession(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-12 h-12 rounded-xl bg-elite-blue/10 flex items-center justify-center"><Award className="w-6 h-6 text-elite-blue" /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Session with {certificateModalSession.expert}</p>
+                    <p className="text-xs text-slate-500">{certificateModalSession.category} · {certificateModalSession.startTime ? new Date(certificateModalSession.startTime).toLocaleDateString() : ""}</p>
+                  </div>
+                </div>
+                {certificateModalSession.expertReview ? (
+                  <>
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Expert feedback & marks</p>
+                      <div className="flex flex-wrap gap-3 mb-2">
+                        <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-sm font-bold">Overall: {certificateModalSession.expertReview.overallRating}/5</span>
+                        {certificateModalSession.expertReview.technicalRating != null && <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium">Technical: {certificateModalSession.expertReview.technicalRating}/5</span>}
+                        {certificateModalSession.expertReview.communicationRating != null && <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">Communication: {certificateModalSession.expertReview.communicationRating}/5</span>}
+                      </div>
+                      {certificateModalSession.expertReview.feedback && <p className="text-sm text-slate-700 mt-2">{certificateModalSession.expertReview.feedback}</p>}
+                      {(certificateModalSession.expertReview.strengths?.length || certificateModalSession.expertReview.weaknesses?.length) ? (
+                        <div className="mt-3 space-y-2">
+                          {certificateModalSession.expertReview.strengths?.length ? <p className="text-xs text-slate-600"><strong>Strengths:</strong> {certificateModalSession.expertReview.strengths.join(", ")}</p> : null}
+                          {certificateModalSession.expertReview.weaknesses?.length ? <p className="text-xs text-slate-600"><strong>Areas to improve:</strong> {certificateModalSession.expertReview.weaknesses.join(", ")}</p> : null}
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-slate-500 border-t border-slate-100 pt-3">This session is completed and verified. You can download or share this certificate from the Certificates tab.</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500">Expert feedback is not available yet for this session.</p>
+                )}
+              </div>
+              <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+                <button onClick={() => setCertificateModalSession(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">Close</button>
+              </div>
+            </div>
           </div>
         )}
       </div>

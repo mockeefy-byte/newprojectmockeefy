@@ -19,8 +19,8 @@ router.get("/category/:categoryId", getRulesByCategory);
 // Calculate Price (legacy POST)
 router.post("/calculate", calculatePrice);
 
-// ----- Dynamic pricing (skill + expert + duration) -----
-// GET /api/pricing/calculate-price?skill=React&expertId=xxx&duration=60
+// Category-based pricing only: expertId + duration (+ optional level override)
+// GET /api/pricing/calculate-price?expertId=xxx&duration=30&level=Intermediate
 router.get("/calculate-price", getCalculatePrice);
 
 // ----- Admin: skill base prices -----

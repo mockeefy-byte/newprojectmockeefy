@@ -3,7 +3,7 @@ import ExpertProfileHeader from "../../components/ExpertProfileHeader";
 import PersonalInfo from "../../components/PersonalInfo";
 import ExpertEducation from "../../components/ExpertEducation";
 import ExpertProfession from "../../components/ExpertProfession";
-import ExpertVerification from "../../components/ExpertVerification";
+import VerificationManager from "../../components/expert/VerificationManager";
 import axios from '../../lib/axios';
 import { useAuth } from "../../context/AuthContext";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -100,7 +100,7 @@ export default function ProfilePage() {
       case "profession":
         return <ExpertProfession {...commonProps} isMissing={isSectionMissing('professional') || isSectionMissing('profession')} />;
       case "verification":
-        return <ExpertVerification {...commonProps} isMissing={isSectionMissing('verification')} />;
+        return <VerificationManager />;
       default:
         return <ExpertProfileHeader onNavigate={(tab) => { setActive(tab); }} onRefresh={fetchProfileData} />;
     }

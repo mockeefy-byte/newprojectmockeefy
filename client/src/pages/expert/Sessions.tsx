@@ -415,21 +415,25 @@ export default function Sessions() {
                                         </div>
                                     </div>
 
-                                    {/* Action Card */}
+                                    {/* Action Card: expert gives feedback (marks) for candidate — only show Write Review when not yet submitted */}
                                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <div>
                                             <h3 className="font-bold text-gray-900">Post-Session Review</h3>
-                                            <p className="text-sm text-gray-500">Submit feedback for the candidate after the session.</p>
+                                            <p className="text-sm text-gray-500">Submit feedback and marks for the candidate after the session.</p>
                                         </div>
-                                        <button
-                                            onClick={() => isSessionEnded(activeSession) ? setReviewSession(activeSession) : toast.error("Wait for session to end")}
-                                            className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium border transition-colors ${isSessionEnded(activeSession)
-                                                ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                : 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed'
-                                                }`}
-                                        >
-                                            Write Review
-                                        </button>
+                                        {(activeSession as any).expertReview ? (
+                                            <span className="px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 text-sm font-medium">Feedback submitted</span>
+                                        ) : (
+                                            <button
+                                                onClick={() => isSessionEnded(activeSession) ? setReviewSession(activeSession) : toast.error("Wait for session to end")}
+                                                className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium border transition-colors ${isSessionEnded(activeSession)
+                                                    ? 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                    : 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                Write Review
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ) : (

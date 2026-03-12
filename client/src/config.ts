@@ -2,8 +2,10 @@
 // Set VITE_API_URL in .env / Vercel / Render to your backend (e.g. https://newprojectmockeefy.onrender.com)
 const hostname = window.location.hostname;
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/$/, "") // no trailing slash
+// Base URL must be origin only (e.g. http://localhost:3000). App paths already include /api/...
+const raw = import.meta.env.VITE_API_URL;
+export const API_BASE_URL = raw
+    ? raw.replace(/\/api\/?$/, "").replace(/\/$/, "") // strip trailing /api and slash
     : import.meta.env.PROD
         ? "https://newprojectmockeefy.onrender.com"
         : `http://${hostname}:3000`;

@@ -29,6 +29,12 @@ const categorySchema = new mongoose.Schema({
         enum: ['Active', 'Inactive'],
         default: 'Active'
     },
+    /** Base price (INR) for 30 min. Used when no PricingRule exists for (category, level, duration). */
+    amount: {
+        type: Number,
+        default: null,
+        min: 0
+    },
     createdAt: {
         type: Date,
         default: Date.now

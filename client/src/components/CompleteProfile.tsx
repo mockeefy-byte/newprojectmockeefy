@@ -3,7 +3,6 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "./auth/AuthLayout";
-import Select from "react-select";
 
 interface LocationState {
   email: string;
@@ -129,26 +128,21 @@ export default function CompleteProfile() {
             <label htmlFor="userType" className={labelClass}>
               I am a
             </label>
-            <Select
+            <select
               id="userType"
-              options={userTypeOptions}
-              value={userTypeOptions.find((o) => o.value === formData.userType)}
-              onChange={(option) => handleInputChange("userType", option?.value ?? "")}
-              placeholder="Select your role"
-              classNamePrefix="react-select"
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  minHeight: "2.75rem",
-                  borderColor: "#e2e8f0",
-                  borderRadius: "0.75rem",
-                  borderWidth: "2px",
-                  fontSize: "0.875rem",
-                  "&:hover": { borderColor: "#cbd5e1" },
-                }),
-                menu: (base) => ({ ...base, fontSize: "0.875rem", zIndex: 10 }),
-              }}
-            />
+              value={formData.userType}
+              onChange={(e) => handleInputChange("userType", e.target.value)}
+              className={inputClass}
+              required
+              aria-label="Select your role"
+            >
+              <option value="">Select one — Candidate or Expert</option>
+              {userTypeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

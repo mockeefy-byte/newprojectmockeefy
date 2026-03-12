@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 interface PricingRule {
     id?: string;
     categoryId: string;
-    skillId?: string; // New field
     level: 'Beginner' | 'Intermediate' | 'Advanced';
     duration: 30 | 60;
     price: number;
@@ -14,22 +13,19 @@ interface PricingRule {
 }
 
 interface Category {
-    id: string;
+    _id: string;
+    id?: string;
     name: string;
+    amount?: number | null;
 }
 
 export default function PricingRules() {
     const [categories, setCategories] = useState<Category[]>([]);
-    const [skills, setSkills] = useState<{ id: string, name: string }[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
-    const [selectedSkill, setSelectedSkill] = useState<string>(''); // Empty for "Base Category Price"
-
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-
     const [rules, setRules] = useState<PricingRule[]>([]);
 
-    // Fetch Categories
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -42,89 +38,56 @@ export default function PricingRules() {
         fetchCategories();
     }, []);
 
-    // Fetch Skills when Category changes
-    useEffect(() => {
-        if (!selectedCategory) {
-            setSkills([]);
-            setSelectedSkill('');
-            return;
-        }
-        const fetchSkills = async () => {
-            try {
-                const res = await axios.get(`/api/skills/category/${selectedCategory}`);
-                setSkills(res.data || []);
-                setSelectedSkill(''); // Reset skill selection
-            } catch (error) {
-                console.error("Error fetching skills", error);
-            }
-        };
-        fetchSkills();
-    }, [selectedCategory]);
-
-    // Fetch Rules when Category or Skill changes
+    // Fetch category-only rules (no skill). Default prices from category base amount (Admin → Categories).
     useEffect(() => {
         if (!selectedCategory) {
             setRules([]);
             return;
         }
-
         const fetchRules = async () => {
             setLoading(true);
             try {
-                // Query param to filter by skillId (or "null" for base)
-                const skillQuery = selectedSkill ? `?skillId=${selectedSkill}` : `?base=true`;
-                const res = await axios.get(`/api/pricing/category/${selectedCategory}${skillQuery}`);
-
-                const defaultRules: PricingRule[] = [];
+                const res = await axios.get(`/api/pricing/category/${selectedCategory}?base=true`);
                 const levels = ['Beginner', 'Intermediate', 'Advanced'] as const;
                 const durations = [30, 60] as const;
-
+                const cat = categories.find(c => (c._id || c.id) === selectedCategory);
+                const baseAmount = (cat?.amount != null && cat.amount >= 0) ? Number(cat.amount) : 500;
+                const defaultRules: PricingRule[] = [];
                 levels.forEach(level => {
                     durations.forEach(duration => {
-                        const existing = res.data?.find((r: PricingRule) => r.level === level && r.duration === duration);
+                        const existing = (res.data || []).find((r: PricingRule) => r.level === level && r.duration === duration);
                         defaultRules.push(existing || {
                             categoryId: selectedCategory,
-                            skillId: selectedSkill || undefined, // undefined effectively acts as null in some contexts, but let's be careful
                             level,
                             duration,
-                            price: duration === 30 ? 500 : 900,
+                            price: duration === 30 ? baseAmount : Math.round(baseAmount * 1.8),
                             currency: 'INR'
                         });
                     });
                 });
-
                 setRules(defaultRules);
             } catch (error) {
-                // Fallback defaults
-                const defaultRules: PricingRule[] = [];
                 const levels = ['Beginner', 'Intermediate', 'Advanced'] as const;
                 const durations = [30, 60] as const;
-                levels.forEach(level => durations.forEach(duration => {
-                    defaultRules.push({
-                        categoryId: selectedCategory,
-                        skillId: selectedSkill || undefined,
-                        level,
-                        duration,
-                        price: duration === 30 ? 500 : 900,
-                        currency: 'INR'
-                    });
-                }));
-                setRules(defaultRules);
+                const cat = categories.find(c => (c._id || c.id) === selectedCategory);
+                const baseAmount = (cat?.amount != null && cat.amount >= 0) ? Number(cat.amount) : 500;
+                setRules(levels.flatMap(level => durations.map(duration => ({
+                    categoryId: selectedCategory,
+                    level,
+                    duration,
+                    price: duration === 30 ? baseAmount : Math.round(baseAmount * 1.8),
+                    currency: 'INR'
+                }))));
             } finally {
                 setLoading(false);
             }
         };
         fetchRules();
-    }, [selectedCategory, selectedSkill]);
+    }, [selectedCategory, categories]);
 
     const handlePriceChange = (index: number, val: string) => {
         const newRules = [...rules];
-        newRules[index].price = parseInt(val) || 0;
-
-        // Ensure skillId is set correctly (sometimes state might drift if not enforced)
-        if (selectedSkill) newRules[index].skillId = selectedSkill;
-        else delete newRules[index].skillId;
-
+        newRules[index].price = parseInt(val, 10) || 0;
         setRules(newRules);
     };
 
@@ -132,15 +95,32 @@ export default function PricingRules() {
         if (!selectedCategory) return;
         setSaving(true);
         try {
-            // Ensure all rules have the correct context
             const contextRules = rules.map(r => ({
-                ...r,
                 categoryId: selectedCategory,
-                skillId: selectedSkill || null // explicit null for backend
+                skillId: null,
+                level: r.level,
+                duration: r.duration,
+                price: r.price,
+                currency: r.currency || 'INR'
             }));
-
             await axios.post('/api/pricing/bulk', { rules: contextRules });
-            toast.success(`Pricing rules saved for ${selectedSkill ? 'Skill' : 'Base Category'}`);
+            toast.success('Pricing rules saved. Session and expert prices will use these values.');
+            // Refresh list so UI shows saved values
+            const res = await axios.get(`/api/pricing/category/${selectedCategory}?base=true`);
+            const levels = ['Beginner', 'Intermediate', 'Advanced'] as const;
+            const durations = [30, 60] as const;
+            const cat = categories.find(c => (c._id || c.id) === selectedCategory);
+            const baseAmount = (cat?.amount != null && cat.amount >= 0) ? Number(cat.amount) : 500;
+            setRules(levels.flatMap(level => durations.map(duration => {
+                const existing = (res.data || []).find((r: { level?: string; duration?: number }) => r.level === level && r.duration === duration);
+                return {
+                    categoryId: selectedCategory,
+                    level,
+                    duration,
+                    price: existing?.price ?? (duration === 30 ? baseAmount : Math.round(baseAmount * 1.8)),
+                    currency: (existing as PricingRule)?.currency || 'INR'
+                };
+            })));
         } catch (error) {
             console.error(error);
             toast.error('Failed to save pricing rules');
@@ -153,46 +133,25 @@ export default function PricingRules() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pricing Configuration</h1>
-                    <p className="text-gray-500 mt-1">Set granular pricing by Category, specific Skill, Level, and Duration.</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Pricing (Category-based)</h1>
+                    <p className="text-gray-500 mt-1">Session price = Category + Expert level + Duration. Set one price per category per level per duration. Skills do not affect price.</p>
                 </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="max-w-5xl">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">1. Select Category</label>
-                            <select
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004fcb] focus:border-transparent"
-                            >
-                                <option value="">-- Choose Category --</option>
-                                {categories.map((cat) => (
-                                    <option key={cat.id || (cat as any)._id} value={cat.id || (cat as any)._id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {selectedCategory && (
-                            <div className="animate-in fade-in slide-in-from-left-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">2. Select Skill (Optional)</label>
-                                <select
-                                    value={selectedSkill}
-                                    onChange={(e) => setSelectedSkill(e.target.value)}
-                                    className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-[#004fcb] bg-blue-50/30 text-blue-900"
-                                >
-                                    <option value="">-- Category Base Price (Default) --</option>
-                                    {Array.isArray(skills) && skills.map((skill) => (
-                                        <option key={skill.id || (skill as any)._id} value={skill.id || (skill as any)._id}>{skill.name}</option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {selectedSkill ? 'Use this to override base pricing for this specific skill.' : 'This sets the default price for the entire category.'}
-                                </p>
-                            </div>
-                        )}
+                    <div className="mb-8">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select Category</label>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#004fcb] focus:border-transparent"
+                        >
+                            <option value="">-- Choose Category --</option>
+                            {categories.map((cat) => (
+                                <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}{cat.amount != null ? ` (base ₹${cat.amount})` : ''}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {selectedCategory && (
@@ -202,8 +161,8 @@ export default function PricingRules() {
                             ) : (
                                 <>
                                     <div className="mb-4 flex items-center gap-2">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${selectedSkill ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                                            Configuring: {selectedSkill ? skills.find(s => s.id === selectedSkill)?.name : 'Base Category Defaults'}
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-gray-100 text-gray-600">
+                                            Category defaults (used for all experts in this category)
                                         </span>
                                     </div>
 

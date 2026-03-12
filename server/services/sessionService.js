@@ -70,10 +70,27 @@ export const getSessionsForUser = async (userId, role) => {
 
             const candidateName = candidate?.name || (typeof session.candidateId === 'string' ? session.candidateId : 'Candidate');
 
+            let expertReview = null;
+            if (role === 'expert') {
+                const ReviewDetails = (await import('../models/reviewModel.js')).default;
+                const review = await ReviewDetails.findOne({ sessionId: session.sessionId, reviewerRole: 'expert' });
+                if (review) {
+                    expertReview = {
+                        overallRating: review.overallRating,
+                        technicalRating: review.technicalRating,
+                        communicationRating: review.communicationRating,
+                        feedback: review.feedback,
+                        strengths: review.strengths,
+                        weaknesses: review.weaknesses
+                    };
+                }
+            }
+
             return {
                 ...session,
                 expertName,
                 candidateName,
+                expertReview,
                 expertDetails: {
                     name: expertName,
                     role: expert?.professionalDetails?.title || 'Expert',

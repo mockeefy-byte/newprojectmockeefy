@@ -997,10 +997,31 @@ export const getPendingExperts = async (req, res) => {
       // Manually populate expertSkills.skillId
       await ExpertDetails.populate(expert, { path: 'expertSkills.skillId', select: 'name' });
 
+      // Category-based price for display (30 min default)
+      let price = 0;
+      try {
+        const catName = expert.personalInformation?.category || "IT";
+        const level = expert.professionalDetails?.level || "Intermediate";
+        const catDoc = await Category.findOne({ name: catName });
+        if (catDoc) {
+          const rule = await PricingRule.findOne({
+            categoryId: catDoc._id,
+            skillId: null,
+            level,
+            duration: 30,
+          });
+          if (rule) price = rule.price;
+          else if (catDoc.amount != null && catDoc.amount >= 0) price = catDoc.amount;
+        }
+      } catch (e) {
+        console.error("Pending expert price calc error:", e);
+      }
+
       return {
         _id: expert._id,
         userId: expert.userId,
         profileImage: expert.profileImage || "",
+        price,
         education: expert.education || [],
         personalInformation: {
           userName: expert.userDetails?.name || "Expert",
@@ -1170,23 +1191,21 @@ export const getVerifiedExperts = async (req, res) => {
       // 1. Manually populate expertSkills.skillId because we are using aggregation
       await ExpertDetails.populate(expert, { path: 'expertSkills.skillId', select: 'name' });
 
-      // Pricing Logic
+      // Pricing: same as booking — PricingRule (category + level + 30 min) or category base amount
       let price = 0;
       try {
-        const catName = expert.personalInformation?.category;
+        const catName = expert.personalInformation?.category || "IT";
         const level = expert.professionalDetails?.level || "Intermediate";
-
-        if (catName) {
-          const catDoc = await Category.findOne({ name: catName });
-          if (catDoc) {
-            const rule = await PricingRule.findOne({
-              categoryId: catDoc._id,
-              level: level,
-              duration: 30, // Default to 30 mins
-              skillId: null
-            });
-            if (rule) price = rule.price;
-          }
+        const catDoc = await Category.findOne({ name: catName });
+        if (catDoc) {
+          const rule = await PricingRule.findOne({
+            categoryId: catDoc._id,
+            level: String(level).trim(),
+            duration: 30,
+            skillId: null
+          });
+          if (rule) price = rule.price;
+          else if (catDoc.amount != null && catDoc.amount >= 0) price = catDoc.amount;
         }
       } catch (e) { console.error("Price fetch error", e); }
 

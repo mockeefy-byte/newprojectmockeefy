@@ -13,9 +13,6 @@ import {
   Download
 } from "lucide-react";
 
-// Using hardcoded URL to ensure connectivity
-const API_URL = "http://localhost:3000/api";
-
 interface DashboardStats {
   totalExperts: number;
   totalUsers: number;

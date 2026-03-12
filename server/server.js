@@ -56,19 +56,27 @@ const allowedOrigins = [
   "https://ownproject-interview.onrender.com",
   "https://mockeefy.com",
   "https://www.mockeefy.com",
-  "https://mockeefy.onrender.com", // Backend direct access
+  "https://mockeefy.onrender.com",
+  "https://newprojectmockeefy.onrender.com",
   process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
-// In development, allow any origin on Vite dev ports (e.g. http://10.41.72.143:5173)
 const isDev = process.env.NODE_ENV !== "production";
 const devOriginRegex = /^https?:\/\/[^/]+:(5173|5174)$/;
+const renderFrontendRegex = /^https:\/\/[a-z0-9-]+\.onrender\.com$/;
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (isDev && devOriginRegex.test(origin)) return true;
+  if (renderFrontendRegex.test(origin)) return true;
+  return false;
+}
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // same-origin or non-browser
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    if (isDev && devOriginRegex.test(origin)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     console.log(`[CORS] Blocked origin: ${origin}`);
     callback(new Error("Not allowed by CORS"));
   },
@@ -108,19 +116,15 @@ app.use(passport.session());
 const io = new Server(httpServer, {
   cors: {
     origin: (requestOrigin, callback) => {
-      if (!requestOrigin) return callback(null, true);
-
-      // Check against allowedOrigins
-      if (allowedOrigins.includes(requestOrigin)) {
-        return callback(null, true);
-      }
-
-      console.log(`[CORS] Blocked origin: ${requestOrigin}`);
-      callback(new Error('Not allowed by CORS'));
+      if (isOriginAllowed(requestOrigin)) return callback(null, true);
+      console.log(`[Socket CORS] Blocked origin: ${requestOrigin}`);
+      callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST"],
     credentials: true,
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 attachSignaling(io);
