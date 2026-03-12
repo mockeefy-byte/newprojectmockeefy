@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Video,
-  RefreshCw,
   Calendar,
   ChevronRight,
   Sparkles,
-  Shield,
   Briefcase,
-  TrendingUp,
-  Activity,
   Award,
   Bookmark,
   Check,
@@ -242,40 +237,7 @@ const MySessions = () => {
         {/* EXECUTIVE DASHBOARD PANEL - OVERVIEW */}
         {activeView === 'overview' && (
           <div className="space-y-6">
-            {/* 1. UNIFIED STATS STRIP - ZERO INTERNAL GAP */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_20px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/10">
-                <div className="flex items-center gap-2.5">
-                  <Activity className="w-4 h-4 text-elite-blue" />
-                  <h2 className="font-elite leading-none">Operational Intel</h2>
-                </div>
-                <button onClick={() => { setRefreshing(true); fetchSessions(); }} className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-100">
-                  <span className="text-[8px] font-black text-slate-400 tracking-tight uppercase">{refreshing ? 'Syncing...' : 'Sync HQ'}</span>
-                  <RefreshCw size={10} className={`${refreshing ? 'animate-spin' : ''} text-slate-400`} />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-slate-100">
-                {[
-                  { label: "Simulations", value: sessions.length, icon: Video, color: "text-elite-blue" },
-                  { label: "Validated", value: sessions.filter(s => s.status === 'Completed').length, icon: Shield, color: "text-emerald-500" },
-                  { label: "Awaiting", value: sessions.filter(s => ['Upcoming', 'Confirmed'].includes(s.status)).length, icon: Calendar, color: "text-amber-500" },
-                  { label: "Tier Rank", value: "Elite", icon: TrendingUp, color: "text-rose-500" }
-                ].map((stat, i) => (
-                  <div key={i} className="p-5 hover:bg-blue-50/30 transition-colors group cursor-default">
-                    <div className="flex items-center gap-2 mb-2">
-                      <stat.icon size={12} className={stat.color} />
-                      <span className="text-[9px] font-black text-slate-400 tracking-tight uppercase">{stat.label}</span>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-elite-black tracking-tighter">{loading ? '...' : stat.value}</span>
-                      <span className="text-[10px] font-bold text-slate-300">RT</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. SESSIONS LIST - Clear layout, Join Now only when joinable */}
+            {/* SESSIONS LIST - Clear layout, Join Now only when joinable */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
@@ -496,7 +458,7 @@ const MySessions = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Bookmark size={16} className="text-elite-blue" />
-                    <h3 className="font-elite text-sm">Quick Access: Saved Experts</h3>
+                    <h3 className="font-elite text-sm">Saved Experts</h3>
                   </div>
                   <button onClick={() => setActiveView('saved')} className="text-[10px] font-bold text-elite-blue hover:underline">View All</button>
                 </div>
