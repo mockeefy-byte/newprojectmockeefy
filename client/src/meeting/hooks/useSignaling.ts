@@ -46,7 +46,7 @@ export function useSignaling({
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
-            timeout: 20000,
+            timeout: import.meta.env.PROD ? 60000 : 20000,
         });
 
         socketRef.current = socket;

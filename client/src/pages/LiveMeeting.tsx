@@ -342,7 +342,12 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
                     </button>
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-sm mb-6">The video stream will start automatically once they connect.</p>
+                  <>
+                    <p className="text-gray-400 text-sm mb-2">The video stream will start automatically once they connect.</p>
+                    {import.meta.env.PROD && (
+                      <p className="text-gray-500 text-xs max-w-xs">First load may take up to a minute while the server starts.</p>
+                    )}
+                  </>
                 )}
 
                 <div className="flex items-center gap-2 bg-[#202124] px-4 py-2 rounded-lg text-sm font-mono text-blue-400 border border-blue-500/20 mt-4">

@@ -1,6 +1,6 @@
 // src/components/LoginForm.tsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "./auth/AuthLayout";
@@ -12,7 +12,9 @@ export const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, googleLogin, user: ctxUser } = useAuth();
+  const from = (location.state as any)?.from?.pathname ? (location.state as any).from : null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -39,7 +41,9 @@ export const LoginForm = () => {
         return;
       }
       const role = finalUser.userType?.toLowerCase();
-      if (role === "admin") {
+      if (from?.pathname) {
+        navigate(from.pathname + (from.search || ""), { replace: true });
+      } else if (role === "admin") {
         navigate("/admin", { replace: true });
       } else if (role === "expert") {
         navigate("/dashboard", { replace: true });
@@ -60,7 +64,9 @@ export const LoginForm = () => {
       const result = await googleLogin(accessToken);
       if (result?.success && result?.user) {
         const role = result.user.userType?.toLowerCase();
-        if (role === "admin") {
+        if (from?.pathname) {
+          navigate(from.pathname + (from.search || ""), { replace: true });
+        } else if (role === "admin") {
           navigate("/admin", { replace: true });
         } else if (role === "expert") {
           navigate("/dashboard", { replace: true });

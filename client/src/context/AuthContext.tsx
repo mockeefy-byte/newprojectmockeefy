@@ -67,13 +67,12 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
   const fetchProfile = async (): Promise<User | null> => {
     try {
-      const response = await axios.get('/api/auth/profile');
-      const userData: User = response.data.user;
+      let response = await axios.get('/api/auth/profile');
+      let userData: User = response.data.user;
 
       let expertData: any = {};
       if (userData.userType === 'expert') {
         try {
-          // Fetch expert profile to get specific photo if needed
           const expertRes = await axios.get('/api/expert/profile');
           if (expertRes.data?.success) {
             expertData = expertRes.data.profile || {};
@@ -83,12 +82,10 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         }
       }
 
-      // Normalize userId or _id to id for consistency
       const normalizedUser: User = {
         ...userData,
         id: userData.userId || (userData as any)._id || userData.id,
         phone: userData.personalInfo?.phone || (userData as any).phone || userData.phone,
-        // Prefer expert photo if available, otherwise fallback
         profileImage: expertData.photoUrl || userData.profileImage || (userData as any).photoUrl,
         role: userData.userType || (userData as any).role,
       };
@@ -96,13 +93,41 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       setUser(normalizedUser);
       return normalizedUser;
     } catch (error: any) {
-      console.error('Failed to fetch profile', error);
-      // 401 = no token, 403 = invalid/expired token → clear session so user can sign in again
       const status = error.response?.status;
       if (status === 401 || status === 403) {
+        try {
+          const refreshRes = await axios.get('/api/auth/refresh', { withCredentials: true });
+          const newToken = refreshRes.data?.accessToken;
+          if (newToken) {
+            localStorage.setItem('token', newToken);
+            setToken(newToken);
+            const retry = await axios.get('/api/auth/profile');
+            const userData: User = retry.data.user;
+            let expertData: any = {};
+            if (userData.userType === 'expert') {
+              try {
+                const expertRes = await axios.get('/api/expert/profile');
+                if (expertRes.data?.success) expertData = expertRes.data.profile || {};
+              } catch (_) {}
+            }
+            const normalizedUser: User = {
+              ...userData,
+              id: userData.userId || (userData as any)._id || userData.id,
+              phone: userData.personalInfo?.phone || (userData as any).phone || userData.phone,
+              profileImage: expertData.photoUrl || userData.profileImage || (userData as any).photoUrl,
+              role: userData.userType || (userData as any).role,
+            };
+            setUser(normalizedUser);
+            return normalizedUser;
+          }
+        } catch (refreshErr) {
+          // Refresh failed (no cookie or expired) → clear and require login
+        }
         localStorage.removeItem('token');
         setUser(null);
         setToken(null);
+      } else {
+        console.error('Failed to fetch profile', error);
       }
       return null;
     } finally {

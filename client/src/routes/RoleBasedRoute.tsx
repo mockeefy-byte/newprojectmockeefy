@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface RoleBasedRouteProps {
@@ -7,10 +7,9 @@ interface RoleBasedRouteProps {
 
 export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ allowedRoles }) => {
     const { user, isLoading } = useAuth();
+    const location = useLocation();
 
     if (isLoading) {
-        // This might be handled by a global loader in App.tsx, 
-        // but good to have fallback here just in case.
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -19,7 +18,7 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ allowedRoles }) 
     }
 
     if (!user) {
-        return <Navigate to="/signin" replace />;
+        return <Navigate to="/signin" state={{ from: location }} replace />;
     }
 
     const role = user.userType?.toLowerCase();

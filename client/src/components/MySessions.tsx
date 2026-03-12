@@ -15,7 +15,8 @@ import {
   Check,
   Star,
   X,
-  MessageSquare
+  MessageSquare,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "./DashboardLayout";
@@ -94,6 +95,26 @@ function getDisplayStatus(session: Session): string {
   return session.status;
 }
 
+/** Session time (e.g. "3:45 PM") and countdown. Countdown runs 3 min before start; Join only when countdown done. */
+function getSessionTimeAndCountdown(session: Session, now: Date): { timeLabel: string; countdown: string | null; joinable: boolean } {
+  const start = session.startTime ? new Date(session.startTime) : null;
+  const end = session.endTime ? new Date(session.endTime) : null;
+  const timeLabel = start ? start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (session.time || '—');
+  if (['Completed', 'Cancelled'].includes(session.status)) return { timeLabel, countdown: null, joinable: false };
+  if (!start) return { timeLabel, countdown: null, joinable: true };
+  if (end && now > end) return { timeLabel, countdown: null, joinable: false };
+  if (now >= start && (!end || now <= end)) return { timeLabel, countdown: null, joinable: true };
+  const diffMs = start.getTime() - now.getTime();
+  const threeMinMs = 3 * 60 * 1000;
+  if (diffMs > threeMinMs) {
+    const min = Math.ceil(diffMs / 60000);
+    return { timeLabel, countdown: `Starts in ${min} min`, joinable: false };
+  }
+  const m = Math.floor(diffMs / 60000);
+  const s = Math.floor((diffMs % 60000) / 1000);
+  return { timeLabel, countdown: `Starts in ${m}:${s.toString().padStart(2, '0')}`, joinable: false };
+}
+
 const MySessions = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -116,6 +137,22 @@ const MySessions = () => {
   const [certificateModalSession, setCertificateModalSession] = useState<Session | null>(null);
   const [reviewForm, setReviewForm] = useState({ overallRating: 5, technicalRating: 5, communicationRating: 5, feedback: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  // Tick every second when on overview and there are upcoming sessions (for countdown)
+  useEffect(() => {
+    if (activeView !== 'overview' || sessions.length === 0) return;
+    const hasUpcoming = sessions.some(s => {
+      if (['Completed', 'Cancelled'].includes(s.status)) return false;
+      const start = s.startTime ? new Date(s.startTime) : null;
+      const end = s.endTime ? new Date(s.endTime) : null;
+      const n = new Date();
+      return start && n < start || (start && end && n >= start && n <= end);
+    });
+    if (!hasUpcoming) return;
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [activeView, sessions]);
 
   const fetchSessions = async () => {
     if (!user?.id) return;
@@ -296,7 +333,7 @@ const MySessions = () => {
                     ) : sessions.length > 0 ? (
                       sessions.slice(0, 10).map(session => {
                         const displayStatus = getDisplayStatus(session);
-                        const joinable = canJoinSession(session);
+                        const { timeLabel, countdown, joinable } = getSessionTimeAndCountdown(session, now);
                         return (
                           <tr key={session.id} className="group hover:bg-slate-50/50 transition-colors">
                             <td className="px-5 py-4">
@@ -312,10 +349,20 @@ const MySessions = () => {
                             </td>
                             <td className="px-5 py-4 hidden sm:table-cell">
                               <p className="text-[11px] font-bold text-slate-800">{session.startTime ? new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>
-                              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{session.time}</p>
+                              <p className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                                <Clock size={12} className="text-slate-400" />
+                                {timeLabel}
+                              </p>
                             </td>
                             <td className="px-5 py-4">
-                              <StatusBadge status={displayStatus} />
+                              {countdown ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                  <Clock size={12} />
+                                  {countdown}
+                                </span>
+                              ) : (
+                                <StatusBadge status={displayStatus} />
+                              )}
                             </td>
                             <td className="px-5 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -344,6 +391,11 @@ const MySessions = () => {
                                   >
                                     Join Now <ChevronRight size={12} strokeWidth={3} />
                                   </button>
+                                ) : countdown ? (
+                                  <span className="text-[10px] font-semibold text-amber-700 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 inline-flex items-center gap-1.5">
+                                    <Clock size={12} />
+                                    {countdown}
+                                  </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold text-slate-400 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
                                     {displayStatus === 'Expired' ? 'Expired' : displayStatus}
@@ -376,7 +428,7 @@ const MySessions = () => {
                 ) : sessions.length > 0 ? (
                   sessions.slice(0, 10).map(session => {
                     const displayStatus = getDisplayStatus(session);
-                    const joinable = canJoinSession(session);
+                    const { timeLabel, countdown, joinable } = getSessionTimeAndCountdown(session, now);
                     return (
                       <div key={session.id} className="p-4 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-start gap-3">
@@ -387,10 +439,19 @@ const MySessions = () => {
                             <p className="font-bold text-slate-900 text-sm">Your session with {session.expert}</p>
                             <p className="text-xs text-slate-500 mt-0.5">{session.category} Simulation</p>
                             {session.startTime && (
-                              <p className="text-xs text-slate-500 mt-1">{new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · {session.time}</p>
+                              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                <Clock size={12} />
+                                {new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} · {timeLabel}
+                              </p>
                             )}
                             <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                              <StatusBadge status={displayStatus} />
+                              {countdown ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                                  <Clock size={12} /> {countdown}
+                                </span>
+                              ) : (
+                                <StatusBadge status={displayStatus} />
+                              )}
                               {displayStatus === 'Completed' ? (
                                 session.candidateReview ? (
                                   <button onClick={() => setCertificateModalSession(session)} className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-1.5">
@@ -408,6 +469,8 @@ const MySessions = () => {
                                 >
                                   Join Now <ChevronRight size={12} />
                                 </button>
+                              ) : countdown ? (
+                                <span className="text-xs font-semibold text-amber-700 flex items-center gap-1"><Clock size={12} /> {countdown}</span>
                               ) : (
                                 <span className="text-xs font-semibold text-slate-400">{displayStatus === 'Expired' ? 'Expired' : displayStatus}</span>
                               )}
