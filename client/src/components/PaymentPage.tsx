@@ -20,6 +20,7 @@ const PaymentPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(false);
+  const [appliedFreePromo, setAppliedFreePromo] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "success" | "error">("idle");
   const [transactionId, setTransactionId] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,6 +36,13 @@ const PaymentPage: React.FC = () => {
 
   const basePrice = bookingDetails ? parsePrice(bookingDetails.price) : 0;
 
+  const gstAmount = Math.floor(basePrice * 0.18);
+  const discountAmount = appliedFreePromo
+    ? basePrice + gstAmount
+    : appliedDiscount
+      ? Math.floor(basePrice * 0.25)
+      : 0;
+
   const orderSummary = {
     productName: bookingDetails
       ? `${bookingDetails.skill || bookingDetails.category} Mock Interview`
@@ -43,10 +51,10 @@ const PaymentPage: React.FC = () => {
       ? `${bookingDetails.duration} Min Session with ${bookingDetails.expertName}`
       : "Annual Plan",
     basePrice: basePrice,
-    discount: appliedDiscount ? Math.floor(basePrice * 0.25) : 0,
-    gst: Math.floor(basePrice * 0.18),
+    discount: discountAmount,
+    gst: gstAmount,
     get total() {
-      return this.basePrice - this.discount + this.gst;
+      return Math.max(0, this.basePrice - this.discount + this.gst);
     },
   };
 
@@ -170,11 +178,71 @@ const PaymentPage: React.FC = () => {
   };
 
   const handleApplyDiscount = () => {
-    if (discountCode.trim() === "SAVE25") {
+    const code = discountCode.trim().toUpperCase();
+    if (code === "FREE100" || code === "MOCKEEFYFREE") {
+      setAppliedFreePromo(true);
+      setAppliedDiscount(false);
+      Swal.fire({ title: "Applied!", text: "Free session — no payment required!", icon: "success", timer: 2000 });
+    } else if (code === "SAVE25") {
       setAppliedDiscount(true);
+      setAppliedFreePromo(false);
       Swal.fire({ title: "Applied!", text: "25% discount added!", icon: "success", timer: 1500 });
     } else {
       Swal.fire({ title: "Invalid", text: "Code not found", icon: "error" });
+    }
+  };
+
+  const buildBookingPayload = () => {
+    let startTimeISO = new Date().toISOString();
+    let endTimeISO = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    if (bookingDetails?.date && bookingDetails?.slot?.time) {
+      const dateObj = new Date(bookingDetails.date);
+      const [startStr] = bookingDetails.slot.time.split(" - ");
+      const [time, period] = startStr.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
+      if (period === "PM" && hours !== 12) hours += 12;
+      if (period === "AM" && hours === 12) hours = 0;
+      dateObj.setHours(hours, minutes, 0, 0);
+      startTimeISO = dateObj.toISOString();
+      const duration = bookingDetails.duration || 60;
+      endTimeISO = new Date(dateObj.getTime() + duration * 60000).toISOString();
+    }
+    return {
+      expertId: bookingDetails?.expertId,
+      candidateId: user?.id || user?.userId,
+      startTime: startTimeISO,
+      endTime: endTimeISO,
+      topics: Array.isArray(bookingDetails?.topics) && bookingDetails.topics.length
+        ? bookingDetails.topics
+        : [bookingDetails?.skill || bookingDetails?.category || "General Mock Interview"],
+      duration: bookingDetails?.duration,
+      skill: bookingDetails?.skill,
+      category: bookingDetails?.category,
+      notes: "Booked with free promo code",
+    };
+  };
+
+  const handleConfirmFreeBooking = async () => {
+    if (orderSummary.total > 0) return;
+    setIsProcessing(true);
+    try {
+      const payload = buildBookingPayload();
+      const res = await axios.post("/api/payment/create-free-booking", {
+        bookingDetails: payload,
+      });
+      if (res.data?.success) {
+        setPaymentStatus("success");
+        setTransactionId(res.data.sessionId || "FREE");
+        setShowSuccessModal(true);
+      } else {
+        throw new Error(res.data?.message || "Free booking failed");
+      }
+    } catch (err: any) {
+      setPaymentStatus("error");
+      setErrors({ submit: err.message || "Failed to confirm free booking." });
+      Swal.fire({ title: "Error", text: err.message || "Failed to confirm free booking.", icon: "error" });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -210,20 +278,37 @@ const PaymentPage: React.FC = () => {
               <p className="text-gray-500 mb-8">One-click secure payment. Choose between UPI, Cards, or Netbanking in the next step.</p>
 
               <div className="space-y-4">
-                <button
-                  onClick={handleInitiatePayment}
-                  disabled={isProcessing}
-                  className="w-full bg-[#004fcb] text-white py-5 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center"
-                >
-                  {isProcessing ? (
-                    <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <Zap className="w-5 h-5 mr-2 fill-current" />
-                      Proceed to Pay ₹{orderSummary.total}
-                    </>
-                  )}
-                </button>
+                {orderSummary.total === 0 ? (
+                  <button
+                    onClick={handleConfirmFreeBooking}
+                    disabled={isProcessing}
+                    className="w-full bg-green-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-green-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-green-600/20 disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {isProcessing ? (
+                      <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2 fill-current" />
+                        Confirm free booking
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleInitiatePayment}
+                    disabled={isProcessing}
+                    className="w-full bg-[#004fcb] text-white py-5 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {isProcessing ? (
+                      <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 mr-2 fill-current" />
+                        Proceed to Pay ₹{orderSummary.total}
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <div className="flex justify-center items-center space-x-6 pt-4 border-t border-gray-50">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo.png/800px-UPI-Logo.png" alt="UPI" className="h-4 grayscale hover:grayscale-0 transition-opacity opacity-60" />
@@ -251,7 +336,8 @@ const PaymentPage: React.FC = () => {
                   Apply
                 </button>
               </div>
-              {appliedDiscount && <p className="text-green-600 text-sm font-medium mt-2">✓ 25% discount applied!</p>}
+              {appliedFreePromo && <p className="text-green-600 text-sm font-medium mt-2">✓ Free session — no payment required!</p>}
+              {appliedDiscount && !appliedFreePromo && <p className="text-green-600 text-sm font-medium mt-2">✓ 25% discount applied!</p>}
             </div>
           </div>
 
@@ -290,9 +376,9 @@ const PaymentPage: React.FC = () => {
                 <span>GST (18%)</span>
                 <span>₹{orderSummary.gst}</span>
               </div>
-              {appliedDiscount && (
+              {(appliedDiscount || appliedFreePromo) && (
                 <div className="flex justify-between text-green-600 text-sm font-medium">
-                  <span>Discount</span>
+                  <span>{appliedFreePromo ? "Free promo" : "Discount"}</span>
                   <span>-₹{orderSummary.discount}</span>
                 </div>
               )}

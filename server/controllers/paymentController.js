@@ -113,3 +113,56 @@ export const verifyPayment = async (req, res) => {
         });
     }
 };
+
+/**
+ * Create a session without payment when a valid free promo code is applied.
+ * Expects same bookingDetails shape as verify-payment (startTime, endTime, expertId, candidateId, topics, duration, etc.).
+ */
+export const createFreeBooking = async (req, res) => {
+    try {
+        const { bookingDetails } = req.body;
+
+        if (!bookingDetails?.expertId || !bookingDetails?.candidateId || !bookingDetails?.startTime || !bookingDetails?.endTime) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required booking details (expertId, candidateId, startTime, endTime)',
+            });
+        }
+
+        const startTime = new Date(bookingDetails.startTime);
+        const endTime = new Date(bookingDetails.endTime);
+
+        const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const sessionData = {
+            sessionId,
+            expertId: bookingDetails.expertId,
+            candidateId: bookingDetails.candidateId,
+            startTime,
+            endTime,
+            topics: Array.isArray(bookingDetails.topics) && bookingDetails.topics.length
+                ? bookingDetails.topics
+                : [bookingDetails?.skill || bookingDetails?.category || 'General Mock Interview'],
+            price: 0,
+            status: 'confirmed',
+            duration: bookingDetails.duration || 60,
+            notes: bookingDetails.notes || 'Booked with free promo code',
+        };
+
+        const session = await sessionService.createSession(sessionData);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Free booking created successfully',
+            data: session,
+            sessionId: session.sessionId,
+        });
+    } catch (error) {
+        console.error('Create Free Booking Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create free booking',
+            error: error.message,
+        });
+    }
+};

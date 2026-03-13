@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from '../lib/axios';
+import { useAuth } from "../context/AuthContext";
 import {
   Star, MapPin, Clock, Users, Award,
   Calendar, CheckCircle, CreditCard, Shield, Video,
@@ -76,8 +77,11 @@ const BookSessionPage = () => {
   const isSessionDuration = (d: unknown): d is SessionDuration => d === 30 || d === 60;
 
   const [showPayment, setShowPayment] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedFreePromo, setAppliedFreePromo] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { profile: existingProfile, expertId: stateExpertId, price: overridePrice } = location.state || {};
 
   const expertId = stateExpertId || existingProfile?.id;
@@ -431,6 +435,70 @@ const BookSessionPage = () => {
     });
   };
 
+  const buildFreeBookingPayload = () => {
+    const dateStr = dates[selectedDate];
+    const slot = selectedSlot;
+    if (!dateStr || !slot?.time) return null;
+    const dateObj = new Date(dateStr);
+    const [startStr] = slot.time.split(" - ");
+    const [time, period] = startStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+    dateObj.setHours(hours, minutes, 0, 0);
+    const startTimeISO = dateObj.toISOString();
+    const endTimeISO = new Date(dateObj.getTime() + (sessionDuration || 60) * 60000).toISOString();
+    return {
+      expertId,
+      candidateId: user?.id || user?.userId,
+      startTime: startTimeISO,
+      endTime: endTimeISO,
+      topics: [selectedSkill],
+      duration: sessionDuration,
+      skill: selectedSkill,
+      category: profile?.category,
+      notes: "Booked with free promo code",
+    };
+  };
+
+  const handleFreeBooking = async () => {
+    if (!appliedFreePromo || !selectedSlot || !profile) return;
+    const payload = buildFreeBookingPayload();
+    if (!payload?.candidateId) {
+      Swal.fire({ title: "Login required", text: "Please sign in to book a session.", icon: "warning" });
+      return;
+    }
+    if (!payload) {
+      Swal.fire({ title: "Error", text: "Invalid date or slot.", icon: "error" });
+      return;
+    }
+    try {
+      const res = await axios.post("/api/payment/create-free-booking", { bookingDetails: payload });
+      if (res.data?.success) {
+        Swal.fire({
+          title: "Booked!",
+          text: "Your free session has been confirmed. Check My Sessions for details.",
+          icon: "success",
+          confirmButtonColor: "#004fcb",
+        }).then(() => navigate("/my-sessions"));
+      } else {
+        throw new Error(res.data?.message || "Booking failed");
+      }
+    } catch (err: any) {
+      Swal.fire({ title: "Error", text: err.message || "Failed to confirm free booking.", icon: "error" });
+    }
+  };
+
+  const handleApplyPromo = () => {
+    const code = discountCode.trim().toUpperCase();
+    if (code === "FREE100" || code === "MOCKEEFYFREE") {
+      setAppliedFreePromo(true);
+      Swal.fire({ title: "Applied!", text: "Free session — no payment required. Click Confirm & Book to complete.", icon: "success", timer: 2500 });
+    } else {
+      Swal.fire({ title: "Invalid", text: "Code not found. Try FREE100 or MOCKEEFYFREE for a free session.", icon: "error" });
+    }
+  };
+
   if (loading) return <BookSessionSkeleton />;
 
   if (!profile) {
@@ -628,8 +696,12 @@ const BookSessionPage = () => {
         <div className="min-w-0">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-0.5">Total amount</span>
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-xl sm:text-2xl font-bold text-[#004fcb] tabular-nums">{formatPrice(displayPrice)}</span>
-            <span className="text-xs font-semibold text-gray-600">for {sessionDuration} min · INR</span>
+            <span className={`text-xl sm:text-2xl font-bold tabular-nums ${appliedFreePromo ? "text-green-600" : "text-[#004fcb]"}`}>
+              {appliedFreePromo ? "Free" : formatPrice(displayPrice)}
+            </span>
+            {!appliedFreePromo && (
+              <span className="text-xs font-semibold text-gray-600">for {sessionDuration} min · INR</span>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-0.5 shrink-0">
@@ -640,6 +712,30 @@ const BookSessionPage = () => {
             {expertLevel}
           </span>
         </div>
+      </div>
+
+      {/* Promo code — free session */}
+      <div className="border-t border-gray-100 pt-4">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Promo code</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="e.g. FREE100"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={handleApplyPromo}
+            className="px-4 py-2.5 bg-blue-50 text-[#004fcb] rounded-xl font-bold text-sm border border-blue-200 hover:bg-blue-100 transition-colors"
+          >
+            Apply
+          </button>
+        </div>
+        {appliedFreePromo && (
+          <p className="text-green-600 text-xs font-medium mt-2">✓ Free session — no payment. Click Confirm & Book to complete.</p>
+        )}
       </div>
 
       {/* ——— Pick a date ——— */}
@@ -828,16 +924,25 @@ const BookSessionPage = () => {
         )}
 
         <button
-          onClick={() => setShowPayment(true)}
+          onClick={() => {
+            if (!selectedSlot) return;
+            if (appliedFreePromo) {
+              handleFreeBooking();
+            } else {
+              setShowPayment(true);
+            }
+          }}
           disabled={!selectedSlot}
           className={`w-full py-3.5 rounded-2xl font-extrabold transition-all flex items-center justify-center gap-2 group ${selectedSlot
-            ? "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md shadow-blue-900/10 active:scale-[0.99]"
+            ? appliedFreePromo
+              ? "bg-green-600 text-white hover:bg-green-700 shadow-md shadow-green-900/10 active:scale-[0.99]"
+              : "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md shadow-blue-900/10 active:scale-[0.99]"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
         >
           {selectedSlot ? (
             <>
-              Confirm & Book
+              {appliedFreePromo ? "Confirm free booking" : "Confirm & Book"}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </>
           ) : (
