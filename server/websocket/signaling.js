@@ -62,7 +62,6 @@ export default function attachSignaling(io) {
         }
 
         socket.join(meetingId);
-        socket.join(meetingId);
 
         // Emit Ready
         if (room.expertSocket && room.candidateSocket) {

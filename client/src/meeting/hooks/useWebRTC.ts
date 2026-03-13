@@ -151,6 +151,20 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
             });
 
             await pc.setLocalDescription(offer);
+
+            // Wait for initial ICE gathering (up to 3s) so remote gets candidates sooner – helps across networks
+            if (pc.iceGatheringState !== 'complete') {
+                await new Promise<void>((resolve) => {
+                    const done = () => {
+                        pc.removeEventListener('icegatheringstatechange', onState);
+                        clearTimeout(t);
+                        resolve();
+                    };
+                    const onState = () => { if (pc.iceGatheringState === 'complete') done(); };
+                    const t = setTimeout(done, 3000);
+                    pc.addEventListener('icegatheringstatechange', onState);
+                });
+            }
             return offer;
         } catch (error) {
             console.error("Error creating offer:", error);
