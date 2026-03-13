@@ -4,6 +4,7 @@ const hostname = typeof window !== "undefined" ? window.location.hostname : "loc
 
 const raw = import.meta.env.VITE_API_URL;
 const prodDefault = "https://newprojectmockeefy.onrender.com";
+// https://newprojectmockeefy.onrender.com
 
 function normalizeBaseUrl(url: string): string {
     return url.replace(/\/api\/?$/, "").replace(/\/+$/, "").trim() || url;
