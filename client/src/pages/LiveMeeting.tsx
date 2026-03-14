@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate, useLocation, useParams } from 'react-rout
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff,
   MessageSquare, Code as CodeIcon,
-  Users, MonitorUp, Info, Clock, Copy, MoreVertical
+  Users, MonitorUp, Info, Clock, Copy, MoreVertical, LogOut
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useWebRTC } from '../meeting/hooks/useWebRTC';
@@ -13,6 +13,9 @@ import { useSignaling } from '../meeting/hooks/useSignaling';
 import { VideoTile } from './meeting/VideoTile';
 import { ChatPanel } from './meeting/ChatPanel';
 import { CodeEditorPanel } from './meeting/CodeEditorPanel';
+import { MeetingSidebar } from './meeting/MeetingSidebar';
+import { PreJoinModal } from './meeting/PreJoinModal';
+import type { SidebarTab } from './meeting/MeetingSidebar';
 import { useAuth } from '../context/AuthContext';
 
 const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) => {
@@ -21,6 +24,10 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
   const [showChat, setShowChat] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPreJoin, setShowPreJoin] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('people');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   const [participants, setParticipants] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -40,7 +47,7 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
     if (sendIceCandidateRef.current) sendIceCandidateRef.current(candidate);
   });
 
-  // Time updater
+  // Time updater + meeting elapsed timer
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -56,6 +63,13 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [cleanup]);
+
+  useEffect(() => {
+    if (!showPreJoin) {
+      const t = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+      return () => clearInterval(t);
+    }
+  }, [showPreJoin]);
 
   const { sendOffer, sendAnswer, sendIceCandidate, endCall, socket } = useSignaling({
     meetingId,
@@ -270,42 +284,75 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
     toast.success("Meeting ID copied to clipboard");
   };
 
+  // --- Pre-join modal (audio & video preference) ---
+  if (showPreJoin && localStream) {
+    return (
+      <>
+        <PreJoinModal
+          localStream={localStream}
+          isMicOn={isMicOn}
+          isCameraOn={isCameraOn}
+          onMicToggle={toggleMic}
+          onCameraToggle={toggleCamera}
+          onContinue={() => setShowPreJoin(false)}
+        />
+      </>
+    );
+  }
+
   // --- Render ---
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#202124] text-white overflow-hidden font-sans">
+    <div className="flex flex-col h-screen min-h-0 w-full max-w-[100vw] bg-[#202124] text-white overflow-hidden font-sans">
 
-      {/* Top Bar (Transparent Overlay) */}
-      <div className="h-16 flex items-center justify-between px-6 z-10 bg-gradient-to-b from-black/50 to-transparent absolute top-0 w-full pointer-events-none">
-        <div className="flex items-center gap-4 pointer-events-auto">
+      {/* Top Bar: responsive padding + mobile menu to open sidebar */}
+      <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 z-10 bg-gradient-to-b from-black/50 to-transparent absolute top-0 w-full pointer-events-none">
+        <div className="flex items-center gap-2 sm:gap-4 pointer-events-auto min-w-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-2 rounded-lg hover:bg-white/10 text-white"
+            aria-label="Open menu"
+          >
+            <Users size={20} />
+          </button>
           {sessionData?.session?.startTime && (
-            <div className="flex items-center gap-2 bg-[#303134] px-3 py-1.5 rounded-md">
-              <Clock size={16} className="text-gray-300" />
-              <span className="text-sm font-medium">{currentTime}</span>
-              <div className="w-px h-4 bg-gray-500 mx-1"></div>
-              <span className="text-xs text-gray-400 font-mono tracking-wider">{meetingId.slice(0, 8)}...</span>
-              <button onClick={copyMeetingId} className="hover:text-blue-400 transition-colors">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#303134] px-2 sm:px-3 py-1.5 rounded-md min-w-0">
+              <Clock size={14} className="text-gray-300 shrink-0" />
+              <span className="text-xs sm:text-sm font-medium truncate">{currentTime}</span>
+              <div className="w-px h-4 bg-gray-500 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
+              <span className="text-[10px] sm:text-xs text-gray-400 font-mono tracking-wider truncate hidden sm:inline">{meetingId.slice(0, 8)}...</span>
+              <button onClick={copyMeetingId} className="hover:text-blue-400 transition-colors p-0.5 shrink-0" aria-label="Copy ID">
                 <Copy size={12} />
               </button>
             </div>
           )}
         </div>
 
-        <div className="pointer-events-auto">
-          {/* Recording indicator removed */}
-        </div>
+        <div className="pointer-events-auto" />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative mt-0">
+      {/* Main Content Area: Sidebar | Video | (Code Editor overlay) | Chat */}
+      <div className="flex-1 flex overflow-hidden relative mt-0 min-h-0">
 
-        {/* Left Panel: Code Editor */}
-        <div className={`transition-all duration-300 ease-in-out bg-[#1e1e1e] border-r border-gray-800 z-20 ${showCodeEditor ? 'w-[45%] translate-x-0 opacity-100' : 'w-0 -translate-x-full opacity-0 overflow-hidden'}`}>
+        {/* Left: Meeting Sidebar (drawer on mobile, inline on md+) */}
+        <MeetingSidebar
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
+          onEndCall={role === 'expert' ? handleEndMeeting : handleLeave}
+          participants={participants}
+          role={role}
+          elapsedSeconds={elapsedSeconds}
+          mobileOpen={sidebarOpen}
+          onMobileClose={() => setSidebarOpen(false)}
+        />
+
+        {/* Optional: Code Editor panel (slides in, full width on small) */}
+        <div className={`transition-all duration-300 ease-in-out bg-[#1e1e1e] border-r border-gray-800 z-10 ${showCodeEditor ? 'w-full sm:w-[320px] lg:w-[420px] opacity-100' : 'w-0 overflow-hidden opacity-0'}`}>
           <CodeEditorPanel isOpen={showCodeEditor} onClose={() => setShowCodeEditor(false)} />
         </div>
 
-        {/* Center: Video Stage */}
-        <div className="flex-1 relative flex items-center justify-center bg-[#202124] p-4 transition-all duration-300">
+        {/* Center: Video Stage - responsive padding and ring */}
+        <div className="flex-1 relative flex items-center justify-center bg-[#202124] p-2 sm:p-4 transition-all duration-300 min-w-0 ring-1 ring-[#f97316]/30 rounded-none sm:rounded-lg m-0 sm:m-2 overflow-hidden">
 
           {/* Grid Layout Logic */}
           <div className={`w-full h-full flex items-center justify-center gap-4 transition-all duration-500 ${remoteStream ? 'grid grid-cols-1 md:grid-cols-2 max-w-6xl mx-auto' : 'flex'}`}>
@@ -325,15 +372,20 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center text-center p-12 rounded-2xl border-2 border-dashed border-gray-700 bg-[#303134]/50 max-w-md relative z-10">
-                <div className="w-16 h-16 bg-[#303134] rounded-full flex items-center justify-center mb-4 animate-pulse">
-                  <Users size={32} className="text-gray-400" />
+              <div className="flex flex-col items-center justify-center text-center p-6 sm:p-12 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-700 bg-[#303134]/50 max-w-md w-full relative z-10">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#303134] rounded-full flex items-center justify-center mb-3 sm:mb-4 animate-pulse">
+                  <Users size={28} className="text-gray-400 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Waiting for {role === 'expert' ? "Candidate" : "Expert"} to join...</h3>
+                <h3 className="text-base sm:text-xl font-bold mb-2">Waiting for {role === 'expert' ? "Candidate" : "Expert"} to join...</h3>
 
                 {(connectionState === 'failed' || connectionState === 'disconnected') ? (
-                  <div className="flex flex-col gap-3 w-full">
-                    <p className="text-red-400 text-sm font-medium">Connection failed. Please retry.</p>
+                  <div className="flex flex-col gap-3 w-full max-w-sm">
+                    <p className="text-red-400 text-xs sm:text-sm font-medium">Remote connection failed. Video/audio need a direct or relay path between you and the other participant.</p>
+                    {import.meta.env.PROD && (
+                      <p className="text-amber-200/90 text-[10px] sm:text-xs">
+                        For different networks you need your own <strong>TURN</strong> (e.g. Coturn). On the server set <code className="bg-black/30 px-1 rounded">TURN_HOST</code>, <code className="bg-black/30 px-1 rounded">TURN_USERNAME</code>, <code className="bg-black/30 px-1 rounded">TURN_CREDENTIAL</code>. See server/TURN_SETUP.md.
+                      </p>
+                    )}
                     <button
                       onClick={handleRetryConnection}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
@@ -343,14 +395,14 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
                   </div>
                 ) : (
                   <>
-                    <p className="text-gray-400 text-sm mb-2">The video stream will start automatically once they connect.</p>
+                    <p className="text-gray-400 text-xs sm:text-sm mb-2">The video stream will start automatically once they connect.</p>
                     {import.meta.env.PROD && (
-                      <p className="text-gray-500 text-xs max-w-xs">First load may take up to a minute while the server starts.</p>
+                      <p className="text-gray-500 text-[10px] sm:text-xs max-w-xs">First load may take up to a minute while the server starts.</p>
                     )}
                   </>
                 )}
 
-                <div className="flex items-center gap-2 bg-[#202124] px-4 py-2 rounded-lg text-sm font-mono text-blue-400 border border-blue-500/20 mt-4">
+                <div className="flex items-center gap-2 bg-[#202124] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-mono text-blue-400 border border-blue-500/20 mt-3 sm:mt-4">
                   <span>{status}</span>
                 </div>
               </div>
@@ -371,9 +423,9 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
             )}
           </div>
 
-          {/* If Remote Exists, Local Video Floats Bottom Right (Google Meet style) */}
+          {/* If Remote Exists, Local Video Floats Bottom Right - smaller on mobile */}
           {remoteStream && localStream && (
-            <div className="absolute bottom-6 right-6 w-64 aspect-video rounded-xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-2 ring-white/10 z-30 hover:scale-105 transition-transform cursor-grab active:cursor-grabbing">
+            <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 w-36 h-28 sm:w-64 sm:aspect-video rounded-lg sm:rounded-xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-2 ring-white/10 z-30 hover:scale-105 transition-transform cursor-grab active:cursor-grabbing">
               <VideoTile
                 name="You"
                 stream={localStream}
@@ -387,116 +439,123 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
 
         </div>
 
-        {/* Right Panel: Chat */}
+        {/* Right Panel: Chat - full width on mobile */}
         {showChat && (
-          <div className="w-96 bg-white border-l border-gray-200 z-20 shadow-2xl animate-in slide-in-from-right duration-300">
+          <div className="absolute sm:relative inset-0 sm:inset-auto w-full sm:w-96 bg-white border-l border-gray-200 z-20 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
             <ChatPanel onClose={() => setShowChat(false)} />
           </div>
         )}
 
       </div>
 
-      {/* Bottom Control Bar */}
-      <div className="h-20 bg-[#202124] flex items-center justify-between px-6 border-t border-gray-800 z-20">
+      {/* Bottom Control Bar - responsive: scroll on small, wrap or compact */}
+      <div className="h-auto min-h-[72px] sm:h-24 bg-[#202124] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 sm:px-6 py-2 sm:py-0 border-t border-gray-800 z-20">
 
-        {/* Left Info */}
-        <div className="flex items-center gap-4 min-w-[200px]">
-          <span className="text-sm font-medium text-gray-300 truncate max-w-[200px]">
+        {/* Left Info - hide or truncate on very small */}
+        <div className="hidden sm:flex items-center gap-4 min-w-0 max-w-[180px] lg:max-w-[200px] shrink-0">
+          <span className="text-sm font-medium text-gray-300 truncate">
             {sessionData?.session?.topics?.[0] || "Live Interview Session"}
           </span>
         </div>
 
-        {/* Center Controls */}
-        <div className="flex items-center gap-3">
+        {/* Center Controls - horizontal scroll on mobile */}
+        <div className="flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden py-1 min-h-[56px] sm:min-h-0 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           <button
             onClick={toggleMic}
-            className={`p-4 rounded-full transition-all duration-200 ${isMicOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-white' : 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]'}`}
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isMicOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-green-400' : 'bg-red-500/90 hover:bg-red-600 text-white'}`}
             title={isMicOn ? "Turn off microphone" : "Turn on microphone"}
           >
-            {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
+            {isMicOn ? <Mic size={20} className="sm:w-[22px] sm:h-[22px]" /> : <MicOff size={20} className="sm:w-[22px] sm:h-[22px]" />}
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">{isMicOn ? 'Mic on' : 'Mic off'}</span>
           </button>
 
           <button
             onClick={toggleCamera}
-            className={`p-4 rounded-full transition-all duration-200 ${isCameraOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-white' : 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]'}`}
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isCameraOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-green-400' : 'bg-red-500/90 hover:bg-red-600 text-white'}`}
             title={isCameraOn ? "Turn off camera" : "Turn on camera"}
           >
-            {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
+            {isCameraOn ? <Video size={20} className="sm:w-[22px] sm:h-[22px]" /> : <VideoOff size={20} className="sm:w-[22px] sm:h-[22px]" />}
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">{isCameraOn ? 'Cam on' : 'Cam off'}</span>
           </button>
 
-          <div className="w-px h-8 bg-gray-700 mx-2"></div>
+          <div className="w-px h-8 sm:h-10 bg-gray-700 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
 
           <button
             onClick={toggleCodeEditor}
-            className={`p-4 rounded-full transition-all duration-200 ${showCodeEditor ? 'bg-blue-300 text-[#202124]' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-white'}`}
-            title="Open Code Editor"
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${showCodeEditor ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
+            title="Code Editor"
           >
-            <CodeIcon size={20} />
+            <CodeIcon size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Code</span>
           </button>
 
           <button
             onClick={handleToggleScreenShare}
-            className={`p-4 rounded-full transition-all duration-200 ${isScreenSharing ? 'bg-blue-300 text-[#202124]' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-white'}`}
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isScreenSharing ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
             title={isScreenSharing ? "Stop Presenting" : "Present Screen"}
           >
-            <MonitorUp size={20} />
+            <MonitorUp size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Share</span>
           </button>
 
           <button
             onClick={handleToggleRecord}
-            className={`p-4 rounded-full transition-all duration-200 ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-white'}`}
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
             title={isRecording ? "Stop Recording" : "Record Meeting"}
           >
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isRecording ? 'border-white' : 'border-current'}`}>
-              <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-red-500'}`}></div>
+            <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center ${isRecording ? 'border-white' : 'border-current'}`}>
+              <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-red-500'}`}></div>
             </div>
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Record</span>
           </button>
 
           <button
             onClick={toggleChat}
-            className={`p-4 rounded-full transition-all duration-200 relative ${showChat ? 'bg-blue-300 text-[#202124]' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-white'}`}
-            title="Chat with everyone"
+            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 relative ${showChat ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
+            title="Chat"
           >
-            <MessageSquare size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[#3c4043] hidden"></span>
+            <MessageSquare size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Chats</span>
           </button>
 
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-4 rounded-full bg-[#3c4043] hover:bg-[#4a4e51] text-white transition-all duration-200 hidden sm:flex"
+            className="flex-col items-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300 transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 hidden sm:flex"
             title="More options"
           >
-            <MoreVertical size={20} />
+            <MoreVertical size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span className="text-[9px] sm:text-xs font-medium hidden md:inline">More</span>
           </button>
 
-          <div className="w-px h-8 bg-gray-700 mx-2"></div>
+          <div className="w-px h-8 sm:h-10 bg-gray-700 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
 
           {role === 'expert' && (
             <button
               onClick={handleEndMeeting}
-              className="hidden sm:flex px-6 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-medium items-center gap-2 transition-all duration-200 mr-2"
+              className="flex-col items-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-all duration-200 hidden sm:flex shrink-0"
               title="End meeting for everyone"
             >
-              <PhoneOff size={20} />
-              <span className="hidden sm:inline">End</span>
+              <PhoneOff size={20} className="sm:w-[22px] sm:h-[22px]" />
+              <span className="text-[9px] sm:text-xs font-medium">End</span>
             </button>
           )}
 
           <button
             onClick={handleLeave}
-            className="px-6 py-3 rounded-full bg-gray-600 hover:bg-gray-700 text-white font-medium flex items-center gap-2 transition-all duration-200"
+            className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-medium transition-all duration-200 shrink-0"
           >
-            <span className="hidden sm:inline">Leave</span>
+            <LogOut size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <span className="text-[9px] sm:text-xs font-medium">Leave</span>
           </button>
         </div>
 
-        {/* Right Info */}
-        <div className="flex items-center justify-end gap-3 min-w-[200px]">
-          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors">
-            <Info size={20} />
+        {/* Right Info - hide on small */}
+        <div className="hidden sm:flex items-center justify-end gap-2 min-w-0 lg:min-w-[120px] shrink-0">
+          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors" title="Info">
+            <Info size={18} />
           </button>
-          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors">
-            <Users size={20} />
+          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors" title="People">
+            <Users size={18} />
           </button>
         </div>
       </div>

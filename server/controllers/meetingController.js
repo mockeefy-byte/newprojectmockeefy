@@ -64,7 +64,7 @@ export const endMeeting = async (req, res) => {
     }
 };
 
-// Build ICE servers: STUN (always) + optional self-hosted TURN (coturn) + optional Metered
+// ICE servers: STUN (always) + optional self-hosted TURN (Coturn only – no 3rd party)
 function buildIceServers() {
     const servers = [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -72,7 +72,6 @@ function buildIceServers() {
         { urls: 'stun:global.stun.twilio.com:3478' },
     ];
 
-    // Self-hosted TURN (e.g. Coturn) – required for video/audio across different networks (other system)
     const turnHost = process.env.TURN_HOST || process.env.COTURN_HOST;
     const turnPort = process.env.TURN_PORT || process.env.COTURN_PORT || '3478';
     const turnUser = process.env.TURN_USERNAME || process.env.COTURN_USERNAME;
@@ -85,7 +84,7 @@ function buildIceServers() {
             username: turnUser,
             credential: turnCred,
         });
-        console.log("[TURN] Using self-hosted TURN at", hostPort);
+        console.log("[TURN] Self-hosted TURN at", hostPort);
     }
 
     return servers;
@@ -93,24 +92,7 @@ function buildIceServers() {
 
 export const getTurnCredentials = async (req, res) => {
     try {
-        // Prefer self-hosted TURN (your own coturn) so video/audio works on "other system"
-        const baseServers = buildIceServers();
-
-        const apiKey = process.env.METERED_API_KEY;
-        if (apiKey) {
-            try {
-                const response = await fetch(`https://mockeefy.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`);
-                if (response.ok) {
-                    const metered = await response.json();
-                    const combined = Array.isArray(metered) ? [...baseServers, ...metered] : [...baseServers, metered];
-                    return res.json(combined);
-                }
-            } catch (e) {
-                console.warn("Metered TURN fetch failed, using STUN + self-hosted TURN only:", e.message);
-            }
-        }
-
-        res.json(baseServers);
+        res.json(buildIceServers());
     } catch (error) {
         console.error("Error building ICE servers:", error);
         res.json([

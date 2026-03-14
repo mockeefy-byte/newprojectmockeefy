@@ -19,20 +19,23 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
     const pcRef = useRef<RTCPeerConnection | null>(null);
     const candidateQueue = useRef<RTCIceCandidateInit[]>([]);
 
-    // 0. Fetch TURN Credentials from backend (uses VITE_API_URL / Render URL)
+    // 0. Fetch TURN Credentials from backend (Render). Long timeout for cold start; TURN required for production video.
     useEffect(() => {
         const fetchIceServers = async () => {
+            const isProd = import.meta.env.PROD;
+            const timeout = isProd ? 25000 : 10000; // Render free tier can take 30–60s to wake
             try {
-                const res = await axios.get('/api/meetings/turn-credentials');
-                if (Array.isArray(res.data)) {
-                    console.log("[WebRTC] Loaded TURN servers:", res.data.length);
+                const res = await axios.get('/api/meetings/turn-credentials', { timeout });
+                if (Array.isArray(res.data) && res.data.length > 0) {
+                    const hasTurn = res.data.some((s: RTCIceServer) => s.urls && (Array.isArray(s.urls) ? s.urls.some((u: string) => u.startsWith('turn:')) : String(s.urls).startsWith('turn:')));
+                    console.log("[WebRTC] Loaded ICE servers:", res.data.length, hasTurn ? "(includes TURN)" : "(STUN only – add TURN for production)");
                     setIceServers(res.data);
                 } else {
                     console.warn("[WebRTC] Invalid TURN format, using defaults");
                     setIceServers(DEFAULT_ICE_SERVERS);
                 }
             } catch (error) {
-                console.error("[WebRTC] Failed to fetch TURN credentials, using defaults", error);
+                console.error("[WebRTC] Failed to fetch ICE servers, using defaults", error);
                 setIceServers(DEFAULT_ICE_SERVERS);
             } finally {
                 setIsIceLoaded(true);
