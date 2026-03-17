@@ -15,7 +15,7 @@ export const API_BASE_URL =
         ? normalizeBaseUrl(String(raw))
         : import.meta.env.PROD
             ? prodDefault
-            : `http://${hostname}:3000`;
+            : `http://${hostname}:5000`;
 
 export const API_URL = API_BASE_URL;
 

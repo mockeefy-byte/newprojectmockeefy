@@ -7,9 +7,9 @@ interface SignalingProps {
     role: string;
     userId: string;
     onBothReady: () => void;
-    onOffer: (payload: { sdp: RTCSessionDescriptionInit, caller: string }) => void;
-    onAnswer: (payload: { sdp: RTCSessionDescriptionInit, caller: string }) => void;
-    onIceCandidate: (payload: { candidate: RTCIceCandidateInit, caller: string }) => void;
+    onOffer: (payload: { sdp: RTCSessionDescriptionInit; caller: string }) => void;
+    onAnswer: (payload: { sdp: RTCSessionDescriptionInit; caller: string }) => void;
+    onIceCandidate: (payload: { candidate: RTCIceCandidateInit; caller: string }) => void;
     onUserLeft: (userId: string) => void;
     onMeetingEnded: () => void;
     isMediaReady: boolean;
@@ -25,100 +25,101 @@ export function useSignaling({
     onIceCandidate,
     onUserLeft,
     onMeetingEnded,
-    isMediaReady
+    isMediaReady,
 }: SignalingProps) {
     const socketRef = useRef<Socket | null>(null);
-    const [status, setStatus] = useState("Initializing...");
+    const [status, setStatus] = useState('Initializing...');
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     useEffect(() => {
-        // Only connect if media is ready (stream obtained)
         if (!isMediaReady) {
-            setStatus("Waiting for Media to be ready...");
+            setStatus('Waiting for Media to be ready...');
             return;
         }
 
         const socketServerUrl = SOCKET_URL || API_BASE_URL;
-        console.log(`[useSignaling] Connecting to socket at: ${socketServerUrl}`);
+        const isSecure = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+        console.log('[useSignaling] Connecting to', socketServerUrl, '(secure:', isSecure + ')');
 
-        const socket = io(socketServerUrl, {
-            query: { userId, meetingId },
+        const socketInstance = io(socketServerUrl, {
+            query: { userId, meetingId, role },
             transports: ['websocket', 'polling'],
             reconnection: true,
-            reconnectionAttempts: 5,
+            reconnectionAttempts: 10,
             reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
             timeout: import.meta.env.PROD ? 60000 : 20000,
+            secure: isSecure,
+            withCredentials: true,
         });
 
-        socketRef.current = socket;
+        socketRef.current = socketInstance;
 
-        socket.on("connect", () => {
-            console.log(`[useSignaling] ✅ SOCKET CONNECTED. ID: ${socket.id}`);
-            setStatus("Connected to Signaling Server");
+        socketInstance.on('connect', () => {
+            console.log('[useSignaling] Socket connected, id:', socketInstance.id);
+            setStatus('Connected to Signaling Server');
+            setSocket(socketInstance);
 
-            // Join Room
             const joinPayload = { meetingId, role, userId };
-            console.log("[useSignaling] Joining room:", joinPayload);
-            socket.emit("join-room", joinPayload);
+            socketInstance.emit('join-room', joinPayload);
         });
 
-        socket.on("both-ready", () => {
-            console.log("[useSignaling] Received 'both-ready' event!");
+        socketInstance.on('disconnect', (reason) => {
+            console.log('[useSignaling] Socket disconnected:', reason);
+            if (reason === 'io server disconnect') setSocket(null);
+        });
+
+        socketInstance.on('both-ready', () => {
+            console.log('[useSignaling] Both ready – starting WebRTC');
             onBothReady();
         });
 
-        socket.on("offer", (payload) => {
-            console.log("[useSignaling] Received offer");
+        socketInstance.on('offer', (payload: { sdp: RTCSessionDescriptionInit; caller: string }) => {
             onOffer(payload);
         });
 
-        socket.on("answer", (payload) => {
-            console.log("[useSignaling] Received answer");
+        socketInstance.on('answer', (payload: { sdp: RTCSessionDescriptionInit; caller: string }) => {
             onAnswer(payload);
         });
 
-        socket.on("ice-candidate", (payload) => {
-            // console.log("[useSignaling] Received ICE candidate"); // verbose
+        socketInstance.on('ice-candidate', (payload: { candidate: RTCIceCandidateInit; caller: string }) => {
             onIceCandidate(payload);
         });
 
-        socket.on("user-left", (leftUserId) => {
-            console.log(`[useSignaling] User left: ${leftUserId}`);
+        socketInstance.on('user-left', (leftUserId: string) => {
             onUserLeft(leftUserId);
         });
 
-        socket.on("meeting-ended", (payload?: { meetingId?: string }) => {
-            console.log("[useSignaling] Meeting ended (notification from server)", payload?.meetingId || "");
+        socketInstance.on('meeting-ended', (payload?: { meetingId?: string }) => {
             onMeetingEnded();
         });
 
-        socket.on("connect_error", (err) => {
-            console.error("[useSignaling] Connection Error:", err.message);
-            setStatus(`Socket Error: ${err.message}`);
+        socketInstance.on('connect_error', (err) => {
+            console.error('[useSignaling] Connect error:', err.message);
+            setStatus('Socket error: ' + err.message);
         });
 
         return () => {
-            console.log("[useSignaling] Disconnecting socket...");
-            socket.disconnect();
+            socketInstance.disconnect();
             socketRef.current = null;
+            setSocket(null);
         };
+    }, [meetingId, role, userId, isMediaReady]);
 
-    }, [meetingId, role, userId, isMediaReady]); // Critical: Re-run if these change, but mostly if media becomes ready.
-
-    // Helper functions to send signals
     const sendOffer = (sdp: RTCSessionDescriptionInit) => {
-        if (socketRef.current) socketRef.current.emit("offer", { meetingId, sdp });
+        if (socketRef.current) socketRef.current.emit('offer', { meetingId, sdp });
     };
 
     const sendAnswer = (sdp: RTCSessionDescriptionInit) => {
-        if (socketRef.current) socketRef.current.emit("answer", { meetingId, sdp });
+        if (socketRef.current) socketRef.current.emit('answer', { meetingId, sdp });
     };
 
     const sendIceCandidate = (candidate: RTCIceCandidateInit) => {
-        if (socketRef.current) socketRef.current.emit("ice-candidate", { meetingId, candidate });
+        if (socketRef.current) socketRef.current.emit('ice-candidate', { meetingId, candidate });
     };
 
     const endCall = () => {
-        if (socketRef.current) socketRef.current.emit("end-call", { meetingId });
+        if (socketRef.current) socketRef.current.emit('end-call', { meetingId });
     };
 
     return {
@@ -126,6 +127,7 @@ export function useSignaling({
         sendAnswer,
         sendIceCandidate,
         endCall,
-        socket: socketRef.current
+        socket,
+        status,
     };
 }

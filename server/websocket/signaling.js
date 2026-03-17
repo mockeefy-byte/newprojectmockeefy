@@ -84,27 +84,28 @@ export default function attachSignaling(io) {
       }
     });
 
-    // WebRTC Signaling
+    // WebRTC Signaling (offer → candidate, answer → expert, ICE both ways)
     socket.on("offer", (payload) => {
-      socket.to(payload.meetingId).emit("offer", {
-        sdp: payload.sdp,
-        caller: socket.id
-      });
+      if (!payload?.meetingId || !payload?.sdp) {
+        console.warn("[Signaling] Invalid offer payload");
+        return;
+      }
+      socket.to(payload.meetingId).emit("offer", { sdp: payload.sdp, caller: socket.id });
+      console.log("[Signaling] Offer forwarded in room", payload.meetingId);
     });
 
     socket.on("answer", (payload) => {
-      socket.to(payload.meetingId).emit("answer", {
-        sdp: payload.sdp,
-        caller: socket.id
-      });
+      if (!payload?.meetingId || !payload?.sdp) {
+        console.warn("[Signaling] Invalid answer payload");
+        return;
+      }
+      socket.to(payload.meetingId).emit("answer", { sdp: payload.sdp, caller: socket.id });
+      console.log("[Signaling] Answer forwarded in room", payload.meetingId);
     });
 
     socket.on("ice-candidate", (payload) => {
-
-      socket.to(payload.meetingId).emit("ice-candidate", {
-        candidate: payload.candidate,
-        caller: socket.id
-      });
+      if (!payload?.meetingId || !payload?.candidate) return;
+      socket.to(payload.meetingId).emit("ice-candidate", { candidate: payload.candidate, caller: socket.id });
     });
 
     // Meeting Controls: when expert or candidate ends the meeting, everyone gets notified

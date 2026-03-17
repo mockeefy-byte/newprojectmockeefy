@@ -367,8 +367,8 @@ const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) =
                   isSpeaking={status === "Live"}
                   className="w-full h-full"
                 />
-                <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  Remote Connection: {connectionState}
+                <div className={`absolute bottom-4 right-4 backdrop-blur-md px-2 py-1 rounded text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity ${(connectionState === 'connected' || connectionState === 'completed') ? 'bg-green-900/70 text-green-200' : 'bg-black/60 text-gray-200'}`}>
+                  {connectionState === 'connected' || connectionState === 'completed' ? 'Connected' : `Connection: ${connectionState}`}
                 </div>
               </div>
             ) : (
@@ -617,6 +617,18 @@ export default function LiveMeetingPage() {
     return (
       <div className="h-screen bg-[#202124] flex items-center justify-center text-white">
         <p className="text-sm">Meeting ended or expired. Redirecting...</p>
+      </div>
+    );
+  }
+
+  // HTTPS / secure context required for getUserMedia and WebRTC in production
+  if (import.meta.env.PROD && typeof window !== 'undefined' && !window.isSecureContext) {
+    return (
+      <div className="h-screen bg-[#202124] flex items-center justify-center p-4">
+        <div className="max-w-md rounded-lg bg-amber-900/30 border border-amber-600/50 p-6 text-center">
+          <p className="text-amber-200 font-medium mb-2">Video calls require a secure connection</p>
+          <p className="text-gray-400 text-sm">Open this page over HTTPS (e.g. https://www.mockeefy.com) to use camera and microphone.</p>
+        </div>
       </div>
     );
   }

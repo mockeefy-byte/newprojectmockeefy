@@ -1,11 +1,19 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import axios from '../../lib/axios';
 
-// Default STUN servers as fallback
-const DEFAULT_ICE_SERVERS = [
+// Default STUN-only fallback (TURN required for cross-network in production)
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
 ];
+
+// 720p preferred constraints for video quality
+const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+    width: { ideal: 1280, min: 640 },
+    height: { ideal: 720, min: 360 },
+    frameRate: { ideal: 24, max: 30 },
+};
 
 export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => void) {
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -44,22 +52,30 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
         fetchIceServers();
     }, []);
 
-    // 1. Initialize Local Media
+    // 1. Initialize Local Media (720p, HTTPS required in production)
     const initLocalMedia = useCallback(async () => {
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+            console.error("[WebRTC] Media requires a secure context (HTTPS or localhost). Current:", window.location.protocol);
+            return null;
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true,
+                video: VIDEO_CONSTRAINTS,
+                audio: { echoCancellation: true, noiseSuppression: true },
             });
             setLocalStream(stream);
             setIsMicOn(true);
             setIsCameraOn(true);
-            // Ensure tracks are enabled initially
-            stream.getAudioTracks().forEach(t => t.enabled = true);
-            stream.getVideoTracks().forEach(t => t.enabled = true);
+            stream.getAudioTracks().forEach(t => { t.enabled = true; });
+            stream.getVideoTracks().forEach(t => { t.enabled = true; });
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack?.getSettings()) {
+                const { width, height } = videoTrack.getSettings();
+                console.log("[WebRTC] Local media started:", width, "x", height);
+            }
             return stream;
         } catch (error) {
-            console.error("Error accessing media devices:", error);
+            console.error("[WebRTC] Error accessing media devices:", error);
             return null;
         }
     }, []);
@@ -99,18 +115,27 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
             }
         };
 
-        // Monitor Connection State
+        // Connection state logging (for production debugging)
         pc.oniceconnectionstatechange = () => {
-            console.log('[WebRTC] ICE State Change:', pc.iceConnectionState);
-            setConnectionState(pc.iceConnectionState);
-
-            if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-                console.warn('[WebRTC] Connection unstable or failed.');
+            const state = pc.iceConnectionState;
+            setConnectionState(state);
+            if (state === 'connected' || state === 'completed') {
+                console.log('[WebRTC] ICE connected – media should be flowing');
+            } else if (state === 'failed') {
+                console.error('[WebRTC] ICE failed – check TURN server and firewall');
+            } else if (state === 'disconnected') {
+                console.warn('[WebRTC] ICE disconnected – may reconnect');
+            } else {
+                console.log('[WebRTC] ICE state:', state);
             }
         };
 
         pc.onconnectionstatechange = () => {
-            console.log('[WebRTC] Connection State Change:', pc.connectionState);
+            const state = pc.connectionState;
+            console.log('[WebRTC] Connection state:', state);
+            if (state === 'failed') {
+                console.error('[WebRTC] PeerConnection failed');
+            }
         };
 
         pcRef.current = pc;
@@ -304,8 +329,10 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
 
     const stopScreenShare = useCallback(async () => {
         try {
-            // Re-acquire camera
-            const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: VIDEO_CONSTRAINTS,
+                audio: true,
+            });
             const videoTrack = cameraStream.getVideoTracks()[0];
 
             if (localStream && pcRef.current) {
@@ -329,7 +356,9 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
     // 8. Screen Share Logic
     const startScreenShare = useCallback(async () => {
         try {
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
+            });
             const screenTrack = screenStream.getVideoTracks()[0];
 
             if (localStream && pcRef.current) {
