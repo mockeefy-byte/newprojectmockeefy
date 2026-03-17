@@ -896,6 +896,16 @@ export const updateAvailability = async (req, res) => {
 
     expert.availability.sessionDuration = newAvailability.sessionDuration ?? expert.availability.sessionDuration;
     expert.availability.maxPerDay = newAvailability.maxPerDay ?? expert.availability.maxPerDay;
+    if (newAvailability.defaultMeetingLink !== undefined) {
+      const raw = typeof newAvailability.defaultMeetingLink === 'string' ? newAvailability.defaultMeetingLink.trim() : '';
+      if (!raw) {
+        expert.availability.defaultMeetingLink = null;
+      } else if (!/^https?:\/\/meet\.google\.com\//i.test(raw)) {
+        return res.status(400).json({ success: false, message: "Invalid Google Meet link. Use a meet.google.com URL." });
+      } else {
+        expert.availability.defaultMeetingLink = raw;
+      }
+    }
     if (Array.isArray(newAvailability.allowedDurations)) {
       expert.availability.allowedDurations = newAvailability.allowedDurations.filter((d) => d === 30 || d === 60);
       if (expert.availability.allowedDurations.length === 0) expert.availability.allowedDurations = [expert.availability.sessionDuration];

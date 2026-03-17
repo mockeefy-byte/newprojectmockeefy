@@ -1,571 +1,257 @@
-// --- Google Meet Style Components ---
+// --- Google Meet only: no socket, no WebRTC ---
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom';
-import {
-  Mic, MicOff, Video, VideoOff, PhoneOff,
-  MessageSquare, Code as CodeIcon,
-  Users, MonitorUp, Info, Clock, Copy, MoreVertical, LogOut
-} from 'lucide-react';
-import { toast } from "sonner";
-import { useWebRTC } from '../meeting/hooks/useWebRTC';
-import { useSignaling } from '../meeting/hooks/useSignaling';
-import { VideoTile } from './meeting/VideoTile';
-import { ChatPanel } from './meeting/ChatPanel';
-import { CodeEditorPanel } from './meeting/CodeEditorPanel';
-import { MeetingSidebar } from './meeting/MeetingSidebar';
-import { PreJoinModal } from './meeting/PreJoinModal';
-import type { SidebarTab } from './meeting/MeetingSidebar';
+import { Clock, Copy, ExternalLink, HelpCircle, LogOut, PhoneOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import axios from '../lib/axios';
 
-const ActiveMeeting = ({ meetingId, role, userId, onLeave, sessionData }: any) => {
-  const [status, setStatus] = useState("Connecting...");
-  const [isBothReady, setIsBothReady] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [showCodeEditor, setShowCodeEditor] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showPreJoin, setShowPreJoin] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('people');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-  const [participants, setParticipants] = useState<string[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
+function formatTimer(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
-  const hasOfferedRef = useRef(false);
-  const sendIceCandidateRef = useRef<((candidate: RTCIceCandidateInit) => void) | null>(null);
+const GoogleMeetOnlyMeeting = ({
+  meetingId,
+  role,
+  onLeave,
+  sessionData,
+}: {
+  meetingId: string;
+  role: string;
+  onLeave: () => void;
+  sessionData: any;
+}) => {
+  const [localMeetLink, setLocalMeetLink] = useState<string | null>(null);
+  const [fetchedMeetingLink, setFetchedMeetingLink] = useState<string | null>(null);
+  const [showMeetLinkInput, setShowMeetLinkInput] = useState(false);
+  const [meetLinkInputValue, setMeetLinkInputValue] = useState('');
+  const [savingMeetLink, setSavingMeetLink] = useState(false);
+  const [showMeetHelp, setShowMeetHelp] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [completing, setCompleting] = useState(false);
 
-  const {
-    localStream, remoteStream, isMicOn, isCameraOn, initLocalMedia,
-    createOffer, handleReceivedOffer, handleReceivedAnswer, handleReceivedIceCandidate,
-    toggleMic, toggleCamera, cleanup, resetPeerConnection, connectionState,
-    startScreenShare, stopScreenShare
-  } = useWebRTC((candidate) => {
-    if (sendIceCandidateRef.current) sendIceCandidateRef.current(candidate);
-  });
-
-  // Time updater + meeting elapsed timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 1000 * 60);
-
-    const handleBeforeUnload = () => {
-      cleanup();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [cleanup]);
+  const sessionEndTime = sessionData?.session?.endTime ? new Date(sessionData.session.endTime).getTime() : null;
 
   useEffect(() => {
-    if (!showPreJoin) {
-      const t = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
-      return () => clearInterval(t);
-    }
-  }, [showPreJoin]);
-
-  const { sendOffer, sendAnswer, sendIceCandidate, endCall, socket } = useSignaling({
-    meetingId,
-    role,
-    userId,
-    onBothReady: () => {
-      setIsBothReady(true);
-      hasOfferedRef.current = false;
-      console.log("[Signaling] Both users ready, initializing connection sequence...");
-      setStatus("Connected (Initializing Media...)");
-      // Extract names if available
-      const remoteName = role === 'expert'
-        ? (sessionData?.session?.candidateId?.name || "Candidate")
-        : (sessionData?.session?.expertId?.name || "Expert");
-      setParticipants(["You", remoteName]);
-    },
-    onOffer: async ({ sdp }) => {
-      if (role === 'candidate') {
-        setStatus("Negotiating...");
-        const answer = await handleReceivedOffer(sdp);
-        if (answer) sendAnswer(answer);
-      }
-    },
-    onAnswer: async ({ sdp }) => {
-      if (role === 'expert') await handleReceivedAnswer(sdp);
-    },
-    onIceCandidate: ({ candidate }) => handleReceivedIceCandidate(candidate),
-    onUserLeft: () => {
-      setStatus("Partner left. Waiting...");
-      setIsBothReady(false);
-      resetPeerConnection();
-      setParticipants(["You"]);
-    },
-    onMeetingEnded: () => {
-      toast.info("The meeting has ended. You will be redirected.", { duration: 4000 });
-      cleanup();
-      setTimeout(() => onLeave(), 800);
-    },
-    isMediaReady: !!localStream
-  });
-
-  useEffect(() => { sendIceCandidateRef.current = sendIceCandidate; }, [sendIceCandidate]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("error", (msg: string) => {
-        console.error("Socket Error:", msg);
-        toast.error(msg);
-        if (msg === "Unauthorized" || msg === "Meeting has ended") {
-          cleanup();
-          onLeave();
-        }
-      });
-    }
-  }, [socket, cleanup, onLeave]);
-
-  useEffect(() => {
-    initLocalMedia().catch(err => console.error("Media Error", err));
-    return () => {
-      // Critical: Stop all tracks immediately on unmount
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      cleanup();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (connectionState === 'connected' || connectionState === 'completed') {
-      setStatus("Live");
-    } else if (connectionState === 'failed' || connectionState === 'disconnected') {
-      setStatus("Connection Lost");
-    } else if (connectionState === 'checking') {
-      setStatus("Connecting...");
-    }
-  }, [connectionState]);
-
-  useEffect(() => {
-    if (isBothReady && localStream && role === 'expert' && !hasOfferedRef.current) {
-      console.log("[ActiveMeeting] Expert triggering offer creation...");
-      hasOfferedRef.current = true;
-      setStatus("Initiating Peer Connection...");
-      createOffer().then(offer => {
-        if (offer) {
-          console.log("[ActiveMeeting] Offer created and sent");
-          sendOffer(offer);
-        } else {
-          console.error("[ActiveMeeting] Failed to create offer");
-          hasOfferedRef.current = false;
-        }
-      });
-    }
-  }, [isBothReady, localStream, role, createOffer, sendOffer]);
-
-  const handleEndMeeting = () => {
-    if (confirm("End meeting for everyone?")) {
-      endCall();
-      toast.info("Meeting ended. Redirecting...", { duration: 3000 });
-      cleanup();
-      setTimeout(() => onLeave(), 500);
-    }
-  };
-
-  const handleLeave = () => {
-    if (confirm("Leave the meeting?")) {
-      cleanup();
-      onLeave();
-    }
-  };
-
-  const handleRetryConnection = () => {
-    // Show a short info message instead of an endless loading toast
-    toast("Retrying connection...", { duration: 2500 });
-
-    resetPeerConnection();
-
-    // Re-trigger offer creation if expert; candidate just waits
-    if (role === 'expert') {
-      setTimeout(() => {
-        hasOfferedRef.current = false;
-        setIsBothReady(true); // Re-trigger effect
-      }, 500);
-    } else {
-      setStatus("Waiting for Host to reconnect...");
-    }
-  };
-
-  // Recording Logic
-  const handleToggleRecord = () => {
-    if (isRecording) {
-      // Stop Recording
-      mediaRecorderRef.current?.stop();
-      setIsRecording(false);
-      toast.success("Recording stopped. Downloading...");
-    } else {
-      // Start Recording
-      const streamToRecord = remoteStream || localStream; // Prefer remote, fallback to local
-      if (!streamToRecord) {
-        toast.error("No stream to record.");
-        return;
-      }
-
-      const options = { mimeType: 'video/webm; codecs=vp9' };
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        console.warn("VP9 not supported, falling back to default");
-        delete (options as any).mimeType;
-      }
-
+    if (!meetingId) return;
+    const fetchSession = async () => {
       try {
-        const mediaRecorder = new MediaRecorder(streamToRecord, options);
-        mediaRecorderRef.current = mediaRecorder;
-        recordedChunksRef.current = [];
+        const res = await axios.get(`/api/sessions/${meetingId}`);
+        const link = res.data?.meetingLink || res.data?.meetLink || null;
+        if (link && /meet\.google\.com/i.test(link)) setFetchedMeetingLink(link);
+      } catch (_) {}
+    };
+    fetchSession();
+    const interval = setInterval(fetchSession, 20000);
+    return () => clearInterval(interval);
+  }, [meetingId]);
 
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            recordedChunksRef.current.push(event.data);
-          }
-        };
+  useEffect(() => {
+    if (!sessionEndTime) return;
+    const tick = () => {
+      const rem = Math.max(0, Math.floor((sessionEndTime - Date.now()) / 1000));
+      setRemainingSeconds(rem);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [sessionEndTime]);
 
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = `meeting-recording-${new Date().toISOString()}.webm`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-        };
+  const googleMeetLink = localMeetLink || fetchedMeetingLink || sessionData?.session?.meetingLink || sessionData?.session?.meetLink;
+  const isGoogleMeetUrl = typeof googleMeetLink === 'string' && /meet\.google\.com/i.test(googleMeetLink);
 
-        mediaRecorder.start();
-        setIsRecording(true);
-        toast.success("Recording started");
-      } catch (err) {
-        console.error("Recording error:", err);
-        toast.error("Failed to start recording");
-      }
+  const handleSaveMeetLink = async () => {
+    const link = meetLinkInputValue.trim();
+    if (!link || !/meet\.google\.com/i.test(link)) {
+      toast.error('Enter a valid Google Meet link (e.g. https://meet.google.com/xxx-xxxx-xxx)');
+      return;
+    }
+    setSavingMeetLink(true);
+    try {
+      await axios.patch(`/api/sessions/${meetingId}/meeting-link`, { meetingLink: link });
+      setLocalMeetLink(link);
+      setShowMeetLinkInput(false);
+      setMeetLinkInputValue('');
+      toast.success('Google Meet link saved. Candidate can open it below.');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to save link');
+    } finally {
+      setSavingMeetLink(false);
     }
   };
 
-  const handleToggleScreenShare = async () => {
-    if (isScreenSharing) {
-      await stopScreenShare();
-      setIsScreenSharing(false);
+  const fetchMeetingLinkOnce = async () => {
+    if (!meetingId) return;
+    try {
+      const res = await axios.get(`/api/sessions/${meetingId}`);
+      const link = res.data?.meetingLink || res.data?.meetLink || null;
+      if (link && /meet\.google\.com/i.test(link)) {
+        setFetchedMeetingLink(link);
+        toast.success('Meet link loaded. Click "Open in Google Meet" to join.');
+      } else {
+        toast.info('Expert has not added a Meet link yet. Ask them to add it.');
+      }
+    } catch (_) {
+      toast.error('Could not load Meet link.');
+    }
+  };
+
+  const handleJoinWithGoogleMeet = () => {
+    if (isGoogleMeetUrl && googleMeetLink) {
+      window.open(googleMeetLink, '_blank', 'noopener,noreferrer');
+      toast.success('Opened Google Meet in a new tab');
     } else {
-      const stream = await startScreenShare();
-      if (stream) {
-        setIsScreenSharing(true);
-        // Listen for browser "Stop Sharing" button
-        stream.getVideoTracks()[0].onended = () => {
-          stopScreenShare();
-          setIsScreenSharing(false);
-        };
-      }
+      window.open('https://meet.google.com/new', '_blank', 'noopener,noreferrer');
+      toast.info('Create your meeting, then paste the link above and Save (expert).');
     }
   };
 
-  // Toggle helpers
-  const toggleChat = () => {
-    setShowChat(!showChat);
-    if (showCodeEditor) setShowCodeEditor(false); // Auto close other panel
-  };
-
-  const toggleCodeEditor = () => {
-    setShowCodeEditor(!showCodeEditor);
-    if (showChat) setShowChat(false); // Auto close other panel
+  const handleEndMeeting = async () => {
+    if (!confirm(role === 'expert' ? 'End meeting for everyone?' : 'Leave this meeting?')) return;
+    setCompleting(true);
+    try {
+      await axios.post(`/api/sessions/${meetingId}/complete`);
+      toast.success(role === 'expert' ? 'Meeting ended.' : 'You left the meeting.');
+      onLeave();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to end meeting');
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const copyMeetingId = () => {
     navigator.clipboard.writeText(meetingId);
-    toast.success("Meeting ID copied to clipboard");
+    toast.success('Meeting ID copied');
   };
 
-  // --- Pre-join modal (audio & video preference) ---
-  if (showPreJoin && localStream) {
-    return (
-      <>
-        <PreJoinModal
-          localStream={localStream}
-          isMicOn={isMicOn}
-          isCameraOn={isCameraOn}
-          onMicToggle={toggleMic}
-          onCameraToggle={toggleCamera}
-          onContinue={() => setShowPreJoin(false)}
-        />
-      </>
-    );
-  }
-
-  // --- Render ---
-
   return (
-    <div className="flex flex-col h-screen min-h-0 w-full max-w-[100vw] bg-[#202124] text-white overflow-hidden font-sans">
-
-      {/* Top Bar: responsive padding + mobile menu to open sidebar */}
-      <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 z-10 bg-gradient-to-b from-black/50 to-transparent absolute top-0 w-full pointer-events-none">
-        <div className="flex items-center gap-2 sm:gap-4 pointer-events-auto min-w-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-2 rounded-lg hover:bg-white/10 text-white"
-            aria-label="Open menu"
-          >
-            <Users size={20} />
-          </button>
-          {sessionData?.session?.startTime && (
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#303134] px-2 sm:px-3 py-1.5 rounded-md min-w-0">
-              <Clock size={14} className="text-gray-300 shrink-0" />
-              <span className="text-xs sm:text-sm font-medium truncate">{currentTime}</span>
-              <div className="w-px h-4 bg-gray-500 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
-              <span className="text-[10px] sm:text-xs text-gray-400 font-mono tracking-wider truncate hidden sm:inline">{meetingId.slice(0, 8)}...</span>
-              <button onClick={copyMeetingId} className="hover:text-blue-400 transition-colors p-0.5 shrink-0" aria-label="Copy ID">
-                <Copy size={12} />
-              </button>
-            </div>
+    <div className="min-h-screen bg-[#202124] text-white flex flex-col p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#303134] px-3 py-2 rounded-lg">
+            <Clock size={18} className="text-gray-400" />
+            <span className="font-mono text-sm">{meetingId.slice(0, 20)}...</span>
+            <button onClick={copyMeetingId} className="p-1 hover:bg-white/10 rounded" aria-label="Copy">
+              <Copy size={14} />
+            </button>
+          </div>
+          {remainingSeconds != null && (
+            <span className="text-sm text-gray-400">
+              {remainingSeconds <= 0 ? "Time's up" : `Ends in ${formatTimer(remainingSeconds)}`}
+            </span>
           )}
         </div>
-
-        <div className="pointer-events-auto" />
+        <button
+          onClick={handleEndMeeting}
+          disabled={completing}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+        >
+          {role === 'expert' ? <PhoneOff size={18} /> : <LogOut size={18} />}
+          {role === 'expert' ? 'End meeting' : 'Leave'}
+        </button>
       </div>
 
-      {/* Main Content Area: Sidebar | Video | (Code Editor overlay) | Chat */}
-      <div className="flex-1 flex overflow-hidden relative mt-0 min-h-0">
+      {/* Google Meet strip */}
+      <div className="rounded-xl bg-[#2d2e31] border border-[#1a73e8]/40 p-4 sm:p-6 mb-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <ExternalLink className="w-6 h-6 text-[#1a73e8]" />
+            <span className="text-lg font-semibold">Google Meet</span>
+            <button type="button" onClick={() => setShowMeetHelp(true)} className="p-1 rounded text-gray-400 hover:text-white">
+              <HelpCircle size={18} />
+            </button>
+          </div>
 
-        {/* Left: Meeting Sidebar (drawer on mobile, inline on md+) */}
-        <MeetingSidebar
-          activeTab={sidebarTab}
-          onTabChange={setSidebarTab}
-          onEndCall={role === 'expert' ? handleEndMeeting : handleLeave}
-          participants={participants}
-          role={role}
-          elapsedSeconds={elapsedSeconds}
-          mobileOpen={sidebarOpen}
-          onMobileClose={() => setSidebarOpen(false)}
-        />
-
-        {/* Optional: Code Editor panel (slides in, full width on small) */}
-        <div className={`transition-all duration-300 ease-in-out bg-[#1e1e1e] border-r border-gray-800 z-10 ${showCodeEditor ? 'w-full sm:w-[320px] lg:w-[420px] opacity-100' : 'w-0 overflow-hidden opacity-0'}`}>
-          <CodeEditorPanel isOpen={showCodeEditor} onClose={() => setShowCodeEditor(false)} />
-        </div>
-
-        {/* Center: Video Stage - responsive padding and ring */}
-        <div className="flex-1 relative flex items-center justify-center bg-[#202124] p-2 sm:p-4 transition-all duration-300 min-w-0 ring-1 ring-[#f97316]/30 rounded-none sm:rounded-lg m-0 sm:m-2 overflow-hidden">
-
-          {/* Grid Layout Logic */}
-          <div className={`w-full h-full flex items-center justify-center gap-4 transition-all duration-500 ${remoteStream ? 'grid grid-cols-1 md:grid-cols-2 max-w-6xl mx-auto' : 'flex'}`}>
-
-            {/* Remote Video (Main Stage if connected) */}
-            {remoteStream ? (
-              <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 group">
-                <VideoTile
-                  name={participants[1] || (role === 'expert' ? "Candidate" : "Expert")}
-                  stream={remoteStream}
-                  isMainTile={true}
-                  isSpeaking={status === "Live"}
-                  className="w-full h-full"
-                />
-                <div className={`absolute bottom-4 right-4 backdrop-blur-md px-2 py-1 rounded text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity ${(connectionState === 'connected' || connectionState === 'completed') ? 'bg-green-900/70 text-green-200' : 'bg-black/60 text-gray-200'}`}>
-                  {connectionState === 'connected' || connectionState === 'completed' ? 'Connected' : `Connection: ${connectionState}`}
+          {role === 'expert' ? (
+            <>
+              {isGoogleMeetUrl ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm text-green-400">Link saved — candidate can join below.</span>
+                  <button type="button" onClick={handleJoinWithGoogleMeet} className="px-4 py-2 rounded-lg bg-[#1a73e8] hover:bg-[#1765cc] text-white font-medium">
+                    Open in Google Meet
+                  </button>
+                  <button type="button" onClick={() => { setShowMeetLinkInput(true); setMeetLinkInputValue(googleMeetLink || ''); }} className="text-sm text-gray-400 hover:text-white">
+                    Change link
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center p-6 sm:p-12 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-700 bg-[#303134]/50 max-w-md w-full relative z-10">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#303134] rounded-full flex items-center justify-center mb-3 sm:mb-4 animate-pulse">
-                  <Users size={28} className="text-gray-400 sm:w-8 sm:h-8" />
-                </div>
-                <h3 className="text-base sm:text-xl font-bold mb-2">Waiting for {role === 'expert' ? "Candidate" : "Expert"} to join...</h3>
-
-                {(connectionState === 'failed' || connectionState === 'disconnected') ? (
-                  <div className="flex flex-col gap-3 w-full max-w-sm">
-                    <p className="text-red-400 text-xs sm:text-sm font-medium">Remote connection failed. Video/audio need a direct or relay path between you and the other participant.</p>
-                    {import.meta.env.PROD && (
-                      <p className="text-amber-200/90 text-[10px] sm:text-xs">
-                        For different networks you need your own <strong>TURN</strong> (e.g. Coturn). On the server set <code className="bg-black/30 px-1 rounded">TURN_HOST</code>, <code className="bg-black/30 px-1 rounded">TURN_USERNAME</code>, <code className="bg-black/30 px-1 rounded">TURN_CREDENTIAL</code>. See server/TURN_SETUP.md.
-                      </p>
-                    )}
-                    <button
-                      onClick={handleRetryConnection}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
-                    >
-                      Retry Connection
+              ) : showMeetLinkInput ? (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="url"
+                    placeholder="Paste Google Meet link here (https://meet.google.com/xxx-xxxx-xxx)"
+                    value={meetLinkInputValue}
+                    onChange={(e) => setMeetLinkInputValue(e.target.value)}
+                    className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-[#202124] border border-gray-600 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#1a73e8]"
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleSaveMeetLink} disabled={savingMeetLink} className="px-4 py-3 rounded-lg bg-[#1a73e8] hover:bg-[#1765cc] text-white font-medium disabled:opacity-50">
+                      {savingMeetLink ? 'Saving...' : 'Save link'}
+                    </button>
+                    <button type="button" onClick={() => { setShowMeetLinkInput(false); setMeetLinkInputValue(''); }} className="px-4 py-3 rounded-lg bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300">
+                      Cancel
                     </button>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-gray-400 text-xs sm:text-sm mb-2">The video stream will start automatically once they connect.</p>
-                    {import.meta.env.PROD && (
-                      <p className="text-gray-500 text-[10px] sm:text-xs max-w-xs">First load may take up to a minute while the server starts.</p>
-                    )}
-                  </>
-                )}
-
-                <div className="flex items-center gap-2 bg-[#202124] px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-mono text-blue-400 border border-blue-500/20 mt-3 sm:mt-4">
-                  <span>{status}</span>
                 </div>
-              </div>
-            )}
-
-            {/* Local Video - Always visible in grid for now, consistent with modern "Side-by-side" view requests */}
-            {(!remoteStream) && localStream && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl aspect-video rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                <VideoTile
-                  name="You"
-                  stream={localStream}
-                  isMainTile={true}
-                  muted={true}
-                  cameraEnabled={isCameraOn}
-                  micEnabled={isMicOn}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* If Remote Exists, Local Video Floats Bottom Right - smaller on mobile */}
-          {remoteStream && localStream && (
-            <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 w-36 h-28 sm:w-64 sm:aspect-video rounded-lg sm:rounded-xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-2 ring-white/10 z-30 hover:scale-105 transition-transform cursor-grab active:cursor-grabbing">
-              <VideoTile
-                name="You"
-                stream={localStream}
-                isMainTile={false}
-                muted={true}
-                cameraEnabled={isCameraOn}
-                micEnabled={isMicOn}
-              />
-            </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={() => setShowMeetLinkInput(true)} className="px-4 py-3 rounded-lg bg-[#1a73e8] hover:bg-[#1765cc] text-white font-medium">
+                    Paste Meet link here
+                  </button>
+                  <button type="button" onClick={handleJoinWithGoogleMeet} className="px-4 py-3 rounded-lg bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300">
+                    Create new Meet
+                  </button>
+                  <span className="text-sm text-gray-400">Create a meeting, copy the link, then paste above and Save.</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {isGoogleMeetUrl ? (
+                <button type="button" onClick={handleJoinWithGoogleMeet} className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#1a73e8] hover:bg-[#1765cc] text-white font-medium text-center">
+                  Open in Google Meet — Join call
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-gray-400">Waiting for expert to add Meet link.</span>
+                  <button type="button" onClick={fetchMeetingLinkOnce} className="px-4 py-2 rounded-lg bg-[#3c4043] hover:bg-[#4a4e51] text-white font-medium">
+                    Refresh link
+                  </button>
+                </div>
+              )}
+            </>
           )}
-
-        </div>
-
-        {/* Right Panel: Chat - full width on mobile */}
-        {showChat && (
-          <div className="absolute sm:relative inset-0 sm:inset-auto w-full sm:w-96 bg-white border-l border-gray-200 z-20 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
-            <ChatPanel onClose={() => setShowChat(false)} />
-          </div>
-        )}
-
-      </div>
-
-      {/* Bottom Control Bar - responsive: scroll on small, wrap or compact */}
-      <div className="h-auto min-h-[72px] sm:h-24 bg-[#202124] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 sm:px-6 py-2 sm:py-0 border-t border-gray-800 z-20">
-
-        {/* Left Info - hide or truncate on very small */}
-        <div className="hidden sm:flex items-center gap-4 min-w-0 max-w-[180px] lg:max-w-[200px] shrink-0">
-          <span className="text-sm font-medium text-gray-300 truncate">
-            {sessionData?.session?.topics?.[0] || "Live Interview Session"}
-          </span>
-        </div>
-
-        {/* Center Controls - horizontal scroll on mobile */}
-        <div className="flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto overflow-y-hidden py-1 min-h-[56px] sm:min-h-0 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-          <button
-            onClick={toggleMic}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isMicOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-green-400' : 'bg-red-500/90 hover:bg-red-600 text-white'}`}
-            title={isMicOn ? "Turn off microphone" : "Turn on microphone"}
-          >
-            {isMicOn ? <Mic size={20} className="sm:w-[22px] sm:h-[22px]" /> : <MicOff size={20} className="sm:w-[22px] sm:h-[22px]" />}
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">{isMicOn ? 'Mic on' : 'Mic off'}</span>
-          </button>
-
-          <button
-            onClick={toggleCamera}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isCameraOn ? 'bg-[#3c4043] hover:bg-[#4a4e51] text-green-400' : 'bg-red-500/90 hover:bg-red-600 text-white'}`}
-            title={isCameraOn ? "Turn off camera" : "Turn on camera"}
-          >
-            {isCameraOn ? <Video size={20} className="sm:w-[22px] sm:h-[22px]" /> : <VideoOff size={20} className="sm:w-[22px] sm:h-[22px]" />}
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">{isCameraOn ? 'Cam on' : 'Cam off'}</span>
-          </button>
-
-          <div className="w-px h-8 sm:h-10 bg-gray-700 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
-
-          <button
-            onClick={toggleCodeEditor}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${showCodeEditor ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
-            title="Code Editor"
-          >
-            <CodeIcon size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Code</span>
-          </button>
-
-          <button
-            onClick={handleToggleScreenShare}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isScreenSharing ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
-            title={isScreenSharing ? "Stop Presenting" : "Present Screen"}
-          >
-            <MonitorUp size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Share</span>
-          </button>
-
-          <button
-            onClick={handleToggleRecord}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
-            title={isRecording ? "Stop Recording" : "Record Meeting"}
-          >
-            <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center ${isRecording ? 'border-white' : 'border-current'}`}>
-              <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-red-500'}`}></div>
-            </div>
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Record</span>
-          </button>
-
-          <button
-            onClick={toggleChat}
-            className={`flex flex-col items-center justify-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 relative ${showChat ? 'bg-[#f97316] text-white' : 'bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300'}`}
-            title="Chat"
-          >
-            <MessageSquare size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span className="text-[9px] sm:text-xs font-medium hidden sm:inline">Chats</span>
-          </button>
-
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex-col items-center gap-0.5 sm:gap-1 p-2 sm:p-3 rounded-xl bg-[#3c4043] hover:bg-[#4a4e51] text-gray-300 transition-all duration-200 min-w-[48px] sm:min-w-[56px] shrink-0 hidden sm:flex"
-            title="More options"
-          >
-            <MoreVertical size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span className="text-[9px] sm:text-xs font-medium hidden md:inline">More</span>
-          </button>
-
-          <div className="w-px h-8 sm:h-10 bg-gray-700 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
-
-          {role === 'expert' && (
-            <button
-              onClick={handleEndMeeting}
-              className="flex-col items-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-all duration-200 hidden sm:flex shrink-0"
-              title="End meeting for everyone"
-            >
-              <PhoneOff size={20} className="sm:w-[22px] sm:h-[22px]" />
-              <span className="text-[9px] sm:text-xs font-medium">End</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleLeave}
-            className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-gray-600 hover:bg-gray-700 text-white font-medium transition-all duration-200 shrink-0"
-          >
-            <LogOut size={20} className="sm:w-[22px] sm:h-[22px]" />
-            <span className="text-[9px] sm:text-xs font-medium">Leave</span>
-          </button>
-        </div>
-
-        {/* Right Info - hide on small */}
-        <div className="hidden sm:flex items-center justify-end gap-2 min-w-0 lg:min-w-[120px] shrink-0">
-          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors" title="Info">
-            <Info size={18} />
-          </button>
-          <button className="p-2 hover:bg-[#3c4043] rounded-full text-gray-400 hover:text-white transition-colors" title="People">
-            <Users size={18} />
-          </button>
         </div>
       </div>
 
+      <p className="text-sm text-gray-500">
+        This session uses Google Meet only. Open the link above to join the video call in a new tab.
+      </p>
+
+      {showMeetHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setShowMeetHelp(false)}>
+          <div className="bg-[#2d2e31] rounded-xl max-w-md w-full p-5 border border-gray-600" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+              <HelpCircle size={20} className="text-[#1a73e8]" />
+              How to use Google Meet
+            </h3>
+            <div className="text-gray-300 text-sm space-y-3">
+              <p><strong className="text-white">Expert:</strong> Click &quot;Paste Meet link here&quot; → create a meeting at meet.google.com/new → copy the link → paste and &quot;Save link&quot;. Then the candidate can open the same link.</p>
+              <p><strong className="text-white">Candidate:</strong> Once the expert has saved a link, click &quot;Open in Google Meet — Join call&quot;. If you don’t see it, click &quot;Refresh link&quot;.</p>
+            </div>
+            <button type="button" onClick={() => setShowMeetHelp(false)} className="mt-4 w-full py-2 rounded-lg bg-[#1a73e8] text-white font-medium">Got it</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-
-// --- Main Page Wrapper ---
+// --- Page wrapper ---
 export default function LiveMeetingPage() {
   const { sessionId: sessionIdParam } = useParams<{ sessionId?: string }>();
   const [searchParams] = useSearchParams();
@@ -573,16 +259,10 @@ export default function LiveMeetingPage() {
   const location = useLocation();
   const { user } = useAuth();
 
-  // meetingId: from URL path (/live-meeting/:sessionId), query (?meetingId=), or state (e.g. from MySessions)
   const sessionFromState = (location.state as any)?.session;
-  const meetingId =
-    sessionIdParam ||
-    searchParams.get('meetingId') ||
-    sessionFromState?.sessionId ||
-    null;
+  const meetingId = sessionIdParam || searchParams.get('meetingId') || sessionFromState?.sessionId || null;
   const role = searchParams.get('role') || (user as any)?.role || (location.state as any)?.role;
 
-  // Business logic: expired only after endTime (e.g. 2:00–2:30 → expire after 2:30, not at 2:00)
   const now = new Date();
   const isSessionEndedOrExpired = sessionFromState && (
     sessionFromState.status === 'Completed' ||
@@ -593,14 +273,14 @@ export default function LiveMeetingPage() {
 
   useEffect(() => {
     if (!meetingId) {
-      toast.error("Invalid Meeting ID");
+      toast.error('Invalid Meeting ID');
       navigate('/my-sessions', { replace: true });
     }
   }, [meetingId, navigate]);
 
   useEffect(() => {
     if (isSessionEndedOrExpired) {
-      toast.error("This meeting has ended or expired.");
+      toast.error('This meeting has ended or expired.');
       navigate(role === 'expert' ? '/dashboard/sessions' : '/my-sessions', { replace: true });
     }
   }, [isSessionEndedOrExpired, navigate, role]);
@@ -608,7 +288,7 @@ export default function LiveMeetingPage() {
   if (!meetingId || !user) {
     return (
       <div className="h-screen bg-[#202124] flex items-center justify-center text-white">
-        {!user ? "Loading..." : "Invalid meeting link. Redirecting..."}
+        {!user ? 'Loading...' : 'Invalid meeting link. Redirecting...'}
       </div>
     );
   }
@@ -621,30 +301,12 @@ export default function LiveMeetingPage() {
     );
   }
 
-  // HTTPS / secure context required for getUserMedia and WebRTC in production
-  if (import.meta.env.PROD && typeof window !== 'undefined' && !window.isSecureContext) {
-    return (
-      <div className="h-screen bg-[#202124] flex items-center justify-center p-4">
-        <div className="max-w-md rounded-lg bg-amber-900/30 border border-amber-600/50 p-6 text-center">
-          <p className="text-amber-200 font-medium mb-2">Video calls require a secure connection</p>
-          <p className="text-gray-400 text-sm">Open this page over HTTPS (e.g. https://www.mockeefy.com) to use camera and microphone.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <>
-      <ActiveMeeting
-        meetingId={meetingId}
-        role={role}
-        userId={user.id || user._id || user.userId}
-        onLeave={() => navigate(role === 'expert' ? '/dashboard/sessions' : '/my-sessions')}
-        sessionData={location.state}
-      />
-      {/* <div className="fixed bottom-0 left-0 bg-black/80 text-white p-2 text-xs z-50 pointer-events-none">
-      Debug: Role={role} | Meeting={meetingId} | User={user.id || user._id} | Status={status}
-    </div> */}
-    </>
+    <GoogleMeetOnlyMeeting
+      meetingId={meetingId}
+      role={role}
+      onLeave={() => navigate(role === 'expert' ? '/dashboard/sessions' : '/my-sessions')}
+      sessionData={location.state}
+    />
   );
 }

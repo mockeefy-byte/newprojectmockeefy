@@ -150,9 +150,10 @@ const MySessions = () => {
   }, [activeView, sessions]);
 
   const fetchSessions = async () => {
-    if (!user?.id) return;
+    const userId = user?.id || user?._id;
+    if (!userId) return;
     try {
-      const res = await axios.get(`/api/sessions/candidate/${user.id}`);
+      const res = await axios.get(`/api/sessions/candidate/${userId}`);
       if (res.data) {
         const mapped = res.data.map((s: any) => ({
           id: s._id,
@@ -169,7 +170,9 @@ const MySessions = () => {
           expertId: s.expertId,
           candidateId: s.candidateId,
           expertReview: s.expertReview || null,
-          candidateReview: s.candidateReview || null
+          candidateReview: s.candidateReview || null,
+          meetLink: s.meetingLink || undefined,
+          meetingLink: s.meetingLink || undefined
         }));
         setSessions(mapped);
       }
@@ -189,7 +192,9 @@ const MySessions = () => {
   };
 
   useEffect(() => {
-    fetchSessions();
+    if (user?.id || user?._id) {
+      fetchSessions();
+    }
     loadSavedExperts();
 
     const handleStorageChange = () => {
@@ -198,7 +203,7 @@ const MySessions = () => {
 
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, [user?.id]);
+  }, [user?.id, user?._id]);
 
   const handleJoin = (session: Session) => {
     navigate(`/live-meeting/${session.sessionId}`, { state: { session } });
@@ -216,7 +221,7 @@ const MySessions = () => {
         strengths: [],
         weaknesses: [],
         expertId: reviewModalSession.expertId,
-        candidateId: reviewModalSession.candidateId || user.id,
+        candidateId: reviewModalSession.candidateId || user?.id || user?._id,
         reviewerRole: "candidate"
       });
       toast.success("Review submitted. You can now view your certificate details.");
@@ -240,9 +245,12 @@ const MySessions = () => {
             {/* SESSIONS LIST - Clear layout, Join Now only when joinable */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className="w-4 h-4 text-elite-blue" />
-                  <h2 className="font-elite leading-none">My Simulations</h2>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-4 h-4 text-elite-blue" />
+                    <h2 className="font-elite leading-none">My Simulations</h2>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-medium">Your bookings appear here — view and join sessions</p>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -372,8 +380,11 @@ const MySessions = () => {
                       <tr>
                         <td colSpan={4} className="px-5 py-16 text-center">
                           <Briefcase className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                          <p className="text-slate-600 font-semibold text-sm">No sessions yet</p>
-                          <p className="text-slate-400 text-xs mt-1">Book a simulation to see it here.</p>
+                          <p className="text-slate-600 font-semibold text-sm">No bookings yet</p>
+                          <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">This is where your booked sessions will show. Book one from the home page or an expert profile.</p>
+                          <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
+                            Book a session
+                          </button>
                         </td>
                       </tr>
                     )}
@@ -445,8 +456,11 @@ const MySessions = () => {
                 ) : (
                   <div className="p-8 text-center">
                     <Briefcase className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-                    <p className="text-slate-500 text-sm font-medium">No sessions yet</p>
-                    <p className="text-slate-400 text-xs mt-1">Book a simulation to see it here.</p>
+                    <p className="text-slate-500 text-sm font-medium">No bookings yet</p>
+                    <p className="text-slate-400 text-xs mt-1">Your booked sessions will show here.</p>
+                    <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
+                      Book a session
+                    </button>
                   </div>
                 )}
               </div>

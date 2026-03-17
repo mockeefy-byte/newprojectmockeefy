@@ -84,7 +84,9 @@ function buildIceServers() {
             username: turnUser,
             credential: turnCred,
         });
-        console.log("[TURN] Self-hosted TURN at", hostPort);
+        console.log("[TURN] Self-hosted TURN at", hostPort, "- required for mobile / different network");
+    } else {
+        console.warn("[TURN] Not configured. Set TURN_HOST, TURN_USERNAME, TURN_CREDENTIAL on Render for calls from mobile or different WiFi.");
     }
 
     return servers;

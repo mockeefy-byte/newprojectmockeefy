@@ -22,6 +22,8 @@ interface MeetingSidebarProps {
   participants: string[];
   role: string;
   elapsedSeconds: number;
+  /** Seconds until session end (from session endTime). When 0, meeting auto-ends. */
+  sessionEndsInSeconds?: number | null;
   children?: React.ReactNode;
   /** On mobile: render as overlay drawer when true */
   mobileOpen?: boolean;
@@ -51,6 +53,7 @@ export function MeetingSidebar({
   participants,
   role,
   elapsedSeconds,
+  sessionEndsInSeconds = null,
   children,
   mobileOpen = false,
   onMobileClose,
@@ -197,9 +200,17 @@ export function MeetingSidebar({
 
       {/* Timer + End at bottom */}
       <div className="p-3 border-t border-[#3c3e42] space-y-2">
-        <div className="flex items-center justify-center gap-2 text-gray-400 text-sm font-mono">
-          <Clock className="w-4 h-4" />
-          {formatTimer(elapsedSeconds)}
+        <div className="flex flex-col items-center gap-1 text-gray-400 text-sm font-mono">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            {formatTimer(elapsedSeconds)}
+            <span className="text-xs text-gray-500">elapsed</span>
+          </div>
+          {sessionEndsInSeconds != null && (
+            <div className={`text-xs ${sessionEndsInSeconds <= 60 ? 'text-amber-400' : 'text-gray-500'}`}>
+              {sessionEndsInSeconds <= 0 ? "Time's up — ending..." : `Ends in ${formatTimer(sessionEndsInSeconds)}`}
+            </div>
+          )}
         </div>
         <button
           onClick={onEndCall}

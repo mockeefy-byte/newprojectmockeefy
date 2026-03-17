@@ -44,6 +44,7 @@ export const createOrder = async (req, res) => {
 };
 
 import * as sessionService from '../services/sessionService.js';
+import ExpertDetails from '../models/expertModel.js';
 
 export const verifyPayment = async (req, res) => {
     try {
@@ -83,6 +84,11 @@ export const verifyPayment = async (req, res) => {
                     duration: bookingDetails.duration || 60,
                     notes: bookingDetails.notes || ""
                 };
+
+                try {
+                    const expert = await ExpertDetails.findOne({ $or: [{ _id: bookingDetails.expertId }, { userId: bookingDetails.expertId }] });
+                    sessionData.meetingLink = expert?.availability?.defaultMeetingLink || null;
+                } catch (_) {}
 
                 const session = await sessionService.createSession(sessionData);
 
@@ -148,6 +154,11 @@ export const createFreeBooking = async (req, res) => {
             duration: bookingDetails.duration || 60,
             notes: bookingDetails.notes || 'Booked with free promo code',
         };
+
+        try {
+            const expert = await ExpertDetails.findOne({ $or: [{ _id: bookingDetails.expertId }, { userId: bookingDetails.expertId }] });
+            sessionData.meetingLink = expert?.availability?.defaultMeetingLink || null;
+        } catch (_) {}
 
         const session = await sessionService.createSession(sessionData);
 

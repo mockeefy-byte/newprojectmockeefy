@@ -12,6 +12,7 @@ interface Slot {
 interface Availability {
   sessionDuration: number;
   allowedDurations?: number[];
+  defaultMeetingLink?: string | null;
   maxPerDay: number;
   weekly: Record<string, Slot[]>;
   breakDates: { start: string; end: string }[];
@@ -137,6 +138,7 @@ const ExpertAvailability = () => {
         availability: {
           sessionDuration: data.sessionDuration || 30,
           allowedDurations: allowed,
+          defaultMeetingLink: data.defaultMeetingLink || null,
           maxPerDay: data.maxPerDay || 4,
           weekly: weekly,
           breakDates: data.breakDates || [],
@@ -248,11 +250,18 @@ const ExpertAvailability = () => {
   const saveAvailability = async () => {
     try {
       const payload = JSON.parse(JSON.stringify(profile.availability));
+      const link = (payload.defaultMeetingLink || '').toString().trim();
+      if (payload.defaultMeetingLink !== undefined) payload.defaultMeetingLink = link || null;
+      if (link && !/^https?:\/\/meet\.google\.com\//i.test(link)) {
+        toast.error("Invalid Google Meet link. Use a meet.google.com URL.");
+        return;
+      }
       await axios.put("/api/expert/availability", payload);
       toast.success("Availability saved successfully!");
     } catch (err) {
       console.error("Save error:", err);
-      toast.error("Failed to save availability");
+      const message = (err as any)?.response?.data?.message || "Failed to save availability";
+      toast.error(message);
     }
   };
 
@@ -319,6 +328,22 @@ const ExpertAvailability = () => {
                     </label>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">At least one must be selected. Candidates will only see the options you enable.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Default Google Meet link (auto-attach to new bookings)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    value={(profile.availability.defaultMeetingLink || "") as string}
+                    onChange={(e) => setProfile(p => ({ ...p, availability: { ...p.availability, defaultMeetingLink: e.target.value } }))}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Optional. If set, every new session booked by a candidate will automatically show this Meet link.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Default slot length (for schedule)</label>

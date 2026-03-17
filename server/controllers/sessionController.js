@@ -59,7 +59,8 @@ export const createSession = async (req, res) => {
             endTime: end,
             topics: topics || [],
             price: finalPrice, // ALWAYS use server-calculated price
-            status: status || 'confirmed'
+            status: status || 'confirmed',
+            meetingLink: expert?.availability?.defaultMeetingLink || null,
         };
 
         const session = await sessionService.createSession(sessionData);
@@ -70,6 +71,40 @@ export const createSession = async (req, res) => {
     }
 };
 
+
+export const updateMeetingLink = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { meetingLink } = req.body;
+        const session = await sessionService.getSessionById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+        const updated = await sessionService.updateSessionMeetingLink(sessionId, meetingLink);
+        return res.json({ success: true, data: updated });
+    } catch (error) {
+        console.error("Update meeting link error:", error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+export const completeSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const session = await sessionService.getSessionById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: "Session not found" });
+        }
+        await sessionService.completeSession(sessionId);
+        try {
+            await meetingService.updateMeetingStatus(sessionId, 'finished');
+        } catch (_) { /* meeting may not exist */ }
+        return res.json({ success: true, message: "Session completed" });
+    } catch (error) {
+        console.error("Complete session error:", error);
+        return res.status(500).json({ message: error.message });
+    }
+};
 
 export const getSession = async (req, res) => {
     try {

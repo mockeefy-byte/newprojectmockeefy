@@ -4,6 +4,12 @@ When participants are on **different networks**, WebRTC needs a **TURN relay**. 
 
 ---
 
+## Not working on mobile or different WiFi?
+
+If you see **ICE State: checking → disconnected → failed** and one device is on **mobile data** or **different WiFi**, the backend has no TURN server. In the browser console you’ll see something like: `ICE servers: 3 entries → 3 STUN, 0 TURN`. Fix: run Coturn (below), then on **Render → Your service → Environment** add `TURN_HOST`, `TURN_USERNAME`, `TURN_CREDENTIAL`, **Save** and **Redeploy**. After deploy, in the console you should see `X STUN, 2 TURN` (or similar). Then try the call again.
+
+---
+
 ## Self-hosted TURN (Coturn)
 
 1. **Deploy Coturn** on a server with a public IP (VPS, cloud VM, or a machine with port forwarding).

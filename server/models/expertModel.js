@@ -47,6 +47,9 @@ const availabilitySchema = new mongoose.Schema({
   /** Durations (in minutes) this expert offers. e.g. [30], [60], or [30, 60]. If empty/absent, use [sessionDuration]. */
   allowedDurations: { type: [Number], default: undefined },
 
+  /** Default Google Meet link to auto-attach to new bookings. */
+  defaultMeetingLink: { type: String, trim: true, default: null },
+
   maxPerDay: { type: Number, default: 1, min: 1 },
 
   weekly: {

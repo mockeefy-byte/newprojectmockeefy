@@ -173,6 +173,22 @@ export const getSessionById = async (sessionId) => {
     return await Session.findOne({ sessionId });
 };
 
+export const updateSessionMeetingLink = async (sessionId, meetingLink) => {
+    return await Session.findOneAndUpdate(
+        { sessionId },
+        { $set: { meetingLink: meetingLink || null } },
+        { new: true }
+    );
+};
+
+export const completeSession = async (sessionId) => {
+    return await Session.findOneAndUpdate(
+        { sessionId },
+        { $set: { status: 'completed' } },
+        { new: true }
+    );
+};
+
 export const createSession = async (sessionData) => {
     const session = new Session(sessionData);
     return await session.save();

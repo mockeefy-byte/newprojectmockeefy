@@ -329,8 +329,6 @@ const BookSessionPage = () => {
 
     const weeklyRanges = availableKey ? weekly[availableKey] : [];
 
-    console.log(`[Debug] Date: ${date.toDateString()}, DayShort: ${dayShort}, AvailableKey: ${availableKey}, Ranges:`, weeklyRanges);
-
     if (!weeklyRanges || weeklyRanges.length === 0) return [];
 
     const parseTimeToMinutes = (timeStr: string) => {
@@ -352,6 +350,9 @@ const BookSessionPage = () => {
 
 
     const generatedSlots: { time: string; available: boolean }[] = [];
+    const duration = Number(sessionDuration);
+    // Step by 15 min so we get 10:00–10:30, 10:15–10:45, 10:30–11:00 etc. Only past or actually booked slots are unavailable.
+    const SLOT_STEP_MINUTES = 15;
 
     weeklyRanges.forEach((range: { from: string; to: string }) => {
       if (!range.from || !range.to) return;
@@ -363,52 +364,50 @@ const BookSessionPage = () => {
         endMinutes += 24 * 60;
       }
 
-      const duration = Number(sessionDuration);
-      console.log(`[Debug] Checking range ${range.from}-${range.to} (${currentMinutes}-${endMinutes}) with duration ${duration}`);
-
       while (currentMinutes + duration <= endMinutes) {
-        // Validation: HIDE past slots for "Today"
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
         const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
 
-        // Skip past slots entirely
+        // Only hide slots whose start time has already passed (today)
         if (isToday && currentMinutes < currentTimeMinutes) {
-          currentMinutes += duration;
+          currentMinutes += SLOT_STEP_MINUTES;
           continue;
         }
 
         const slotStartMinutes = currentMinutes;
         const slotDate = new Date(date);
         slotDate.setHours(Math.floor(slotStartMinutes / 60), slotStartMinutes % 60, 0, 0);
+        const slotEndMinutes = currentMinutes + duration;
+        const slotEndDate = new Date(date);
+        slotEndDate.setHours(Math.floor(slotEndMinutes / 60), slotEndMinutes % 60, 0, 0);
 
+        // Only mark booked if a confirmed session overlaps this exact slot on the same day
         const isBooked = bookedSessions.some(session => {
           if (session.status === 'cancelled') return false;
-          // Robust date parsing
           const sStart = new Date(session.startTime);
           const sEnd = new Date(session.endTime);
-
           if (isNaN(sStart.getTime()) || isNaN(sEnd.getTime())) return false;
-
-          const slotEndMinutes = currentMinutes + duration;
-          const slotEndDate = new Date(date);
-          slotEndDate.setHours(Math.floor(slotEndMinutes / 60), slotEndMinutes % 60, 0, 0);
-
+          // Same calendar day only
+          if (sStart.toDateString() !== date.toDateString()) return false;
           return slotDate < sEnd && slotEndDate > sStart;
         });
 
         const slotStart = formatMinutesToTime(currentMinutes);
-        const slotEnd = formatMinutesToTime(currentMinutes + duration);
+        const slotEnd = formatMinutesToTime(slotEndMinutes);
+        const timeStr = `${slotStart} - ${slotEnd}`;
+        const available = !isBooked;
 
-        generatedSlots.push({
-          time: `${slotStart} - ${slotEnd}`,
-          available: !isBooked
-        });
-        currentMinutes += duration;
+        const existing = generatedSlots.find(s => s.time === timeStr);
+        if (existing) {
+          existing.available = existing.available || available;
+        } else {
+          generatedSlots.push({ time: timeStr, available });
+        }
+        currentMinutes += SLOT_STEP_MINUTES;
       }
     });
 
-    console.log(`[Debug] Generated Slots for ${date.toDateString()}:`, generatedSlots);
     return generatedSlots.sort((a, b) => a.time.localeCompare(b.time));
   };
 

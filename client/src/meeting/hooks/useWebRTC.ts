@@ -35,8 +35,17 @@ export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => vo
             try {
                 const res = await axios.get('/api/meetings/turn-credentials', { timeout });
                 if (Array.isArray(res.data) && res.data.length > 0) {
-                    const hasTurn = res.data.some((s: RTCIceServer) => s.urls && (Array.isArray(s.urls) ? s.urls.some((u: string) => u.startsWith('turn:')) : String(s.urls).startsWith('turn:')));
-                    console.log("[WebRTC] Loaded ICE servers:", res.data.length, hasTurn ? "(includes TURN)" : "(STUN only – add TURN for production)");
+                    let stunCount = 0;
+                    let turnCount = 0;
+                    res.data.forEach((s: RTCIceServer) => {
+                        const urls = Array.isArray(s.urls) ? s.urls : (s.urls ? [s.urls] : []);
+                        urls.forEach((u: string) => u.startsWith('turn:') ? turnCount++ : stunCount++);
+                    });
+                    const hasTurn = turnCount > 0;
+                    console.log("[WebRTC] ICE servers:", res.data.length, "entries →", stunCount, "STUN,", turnCount, "TURN.");
+                    if (!hasTurn && import.meta.env.PROD) {
+                        console.warn("[WebRTC] No TURN server. Connection will likely fail from mobile or different WiFi. Add TURN_HOST, TURN_USERNAME, TURN_CREDENTIAL on Render.");
+                    }
                     setIceServers(res.data);
                 } else {
                     console.warn("[WebRTC] Invalid TURN format, using defaults");

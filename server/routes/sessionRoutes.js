@@ -14,6 +14,8 @@ router.post('/:sessionId/join', sessionController.joinSession);
 /* ADMIN: Get All Sessions */
 router.get('/all', sessionController.getAllSessions);
 
+router.patch('/:sessionId/meeting-link', sessionController.updateMeetingLink);
+router.post('/:sessionId/complete', sessionController.completeSession);
 router.get('/:sessionId', sessionController.getSession);
 router.get('/candidate/:candidateId', sessionController.getSessionsByCandidate);
 router.get('/expert/:expertId', sessionController.getSessionsByExpert);

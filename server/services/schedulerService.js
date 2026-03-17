@@ -14,6 +14,23 @@ export const initScheduler = () => {
     setInterval(async () => {
         try {
             const now = new Date();
+
+            // Auto-complete sessions that have ended (Google Meet runs outside app)
+            // This ensures sessions become "completed" even if users keep only the Meet tab open.
+            try {
+                const result = await Session.updateMany(
+                    {
+                        endTime: { $lt: now },
+                        status: { $in: ['confirmed', 'live', 'Upcoming', 'pending'] },
+                    },
+                    { $set: { status: 'completed' } }
+                );
+                if (result?.modifiedCount) {
+                    console.log(`[Scheduler] Auto-completed ${result.modifiedCount} ended sessions`);
+                }
+            } catch (e) {
+                console.error("[Scheduler] Auto-complete error:", e);
+            }
             // Look for sessions starting in 10-11 minutes from now
             // This window ensures we only pick them up once (since we run every 1 min)
             const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
