@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import MockeefyLogo from "./MockeefyLogo";
 
 interface FooterProps {
   minimal?: boolean;
@@ -16,11 +17,11 @@ const Footer = ({ minimal = false }: FooterProps) => (
           {/* Brand Column */}
           <div className="space-y-6">
             <div className="flex items-center gap-3 group">
-              <img src="/mockeefy.png" alt="Mockeefy" className="h-10 w-auto object-contain" />
-              <div className="font-bold text-2xl text-[#004fcb] tracking-tight font-['Outfit']">Mockeefy</div>
+              <MockeefyLogo className="h-10 w-10" variant="brand" />
+              <div className="text-2xl text-[#004fcb] font-logo tracking-tight">Mockeefy</div>
             </div>
             <p className="text-slate-600 leading-relaxed text-sm max-w-xs">
-              The world's leading <span className="text-[#004fcb] font-semibold">AI-powered</span> mock interview platform. Master your interviews with expert guidance.
+              The world's leading platform to <span className="text-[#004fcb] font-semibold">book real experts</span> for mock interviews. Master your interviews with live sessions and expert feedback.
             </p>
             <div className="flex gap-4">
               <a href="#" className="w-10 h-10 bg-slate-50 border border-slate-100 hover:border-[#004fcb] hover:bg-blue-50 rounded-xl flex items-center justify-center transition-all duration-300 group">

@@ -23,6 +23,8 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { getProfileImageUrl } from "../lib/imageUtils";
 import { useUserProfile } from "../hooks/useUserProfile";
+import MockeefyLogo from "./MockeefyLogo";
+import Avatar from "./ui/avatar";
 
 interface Notification {
   _id: string;
@@ -40,12 +42,14 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
   const { user, logout } = useAuth();
@@ -69,6 +73,18 @@ const Navigation = () => {
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setIsMoreOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const markAsRead = async (id: string) => {
     try {
@@ -110,24 +126,33 @@ const Navigation = () => {
     setIsMenuOpen(!isMenuOpen);
     setIsNotificationOpen(false);
     setIsProfileMenuOpen(false);
+    setIsMoreOpen(false);
   };
 
   const closeAllDropdowns = () => {
     setIsNotificationOpen(false);
     setIsProfileMenuOpen(false);
     setIsMenuOpen(false);
+    setIsMoreOpen(false);
   };
 
   const navItems = [
     { name: "Mock Interview", href: "/", icon: <Users size={16} /> },
     { name: "My Sessions", href: "/my-sessions", icon: <Calendar size={16} /> },
-    { name: "Mockeefy AI", href: "/ai-video", icon: <Bot size={16} /> },
+    { name: "Experts List", href: "/book-session", icon: <Briefcase size={16} /> },
+  ];
+
+  const moreItems = [
+    { name: "Profile", href: "/profile", icon: <User size={16} /> },
+    { name: "Interview tips", href: "/tips", icon: <BookOpen size={16} /> },
+    { name: "Saved Experts", href: "/saved-experts", icon: <Bookmark size={16} /> },
+    { name: "Certificates", href: "/certificates", icon: <Award size={16} /> },
   ];
 
   const sidebarNavItems = user ? [
-    { name: "Career Hub", href: "/my-sessions?view=jobs", icon: <Briefcase size={16} /> },
-    { name: "Saved Experts", href: "/my-sessions?view=saved", icon: <Bookmark size={16} /> },
-    { name: "Certificates", href: "/my-sessions?view=certificates", icon: <Award size={16} /> },
+    { name: "Interview tips", href: "/tips", icon: <BookOpen size={16} /> },
+    { name: "Saved Experts", href: "/saved-experts", icon: <Bookmark size={16} /> },
+    { name: "Certificates", href: "/certificates", icon: <Award size={16} /> },
   ] : [];
 
   const profileMenuItems = [
@@ -144,23 +169,22 @@ const Navigation = () => {
         className="bg-white/90 backdrop-blur-xl border-b border-slate-200/70 sticky top-0 z-[100] w-full h-[68px] transition-all duration-300 shadow-[0_2px_18px_-8px_rgba(0,0,0,0.10)]"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-full">
-          <div className="flex items-center justify-between h-full">
-            {/* Left side: Logo + Nav Items */}
-            <div className="flex items-center space-x-8 lg:space-x-12">
-              <Link
-                to="/"
-                className="flex items-center gap-2.5 group active:scale-95 transition-transform"
-                onClick={closeAllDropdowns}
-              >
-                <div className="w-9 h-9 rounded-xl bg-elite-blue flex items-center justify-center p-2 shadow-lg shadow-blue-500/20">
-                  <Sparkles className="text-white w-full h-full" />
-                </div>
-                <span className="font-elite text-[18px] tracking-tight">
-                  Mockeefy
-                </span>
-              </Link>
+          <div className="flex items-center justify-between h-full gap-3">
+            {/* Left: Logo */}
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 group active:scale-95 transition-transform shrink-0"
+              onClick={closeAllDropdowns}
+            >
+              <MockeefyLogo className="h-9 w-9" variant="brand" />
+              <span className="text-[18px] font-logo tracking-tight text-slate-900">
+                Mockeefy
+              </span>
+            </Link>
 
-              <div className="hidden md:flex items-center gap-1.5 bg-slate-50/80 border border-slate-200/60 rounded-2xl p-1">
+            {/* Center: Nav pill (includes More) */}
+            <div className="hidden md:flex flex-1 items-center justify-center">
+              <div className="flex items-center gap-1.5 bg-slate-50/80 border border-slate-200/60 rounded-2xl p-1">
                 {navItems.map((item) => {
                   const isActive = location.pathname === item.href || (location.pathname.startsWith(item.href) && item.href !== "/");
 
@@ -181,6 +205,47 @@ const Navigation = () => {
                     </Link>
                   );
                 })}
+
+                {/* More dropdown */}
+                <div className="relative" ref={moreMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreOpen((v) => !v);
+                      setIsProfileMenuOpen(false);
+                      setIsNotificationOpen(false);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all duration-300 rounded-2xl whitespace-nowrap ${
+                      isMoreOpen
+                        ? "text-elite-blue bg-white shadow-sm border border-slate-200/70"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                    }`}
+                  >
+                    <span className={`${isMoreOpen ? "text-elite-blue" : "text-slate-400 group-hover:text-slate-900"}`}>
+                      <ChevronDown size={16} />
+                    </span>
+                    More
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${isMoreOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isMoreOpen && (
+                    <div className="absolute left-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-1.5 space-y-0.5">
+                        {moreItems.map((item) => (
+                          <Link
+                            key={item.name}
+                            to={item.href}
+                            className="flex items-center px-3.5 py-2.5 rounded-xl hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-sm font-medium transition-all"
+                            onClick={closeAllDropdowns}
+                          >
+                            <span className="mr-3 text-slate-400">{item.icon}</span>
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -259,12 +324,7 @@ const Navigation = () => {
                       <p className="text-[11px] text-slate-500 mt-1">Member</p>
                     </div>
                     <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden ring-2 ring-transparent group-hover:ring-blue-100/50 transition-all">
-                      <img
-                        src={profileImage || getProfileImageUrl(null)}
-                        alt="p"
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
-                      />
+                      <Avatar name={user?.name} src={profileImage} className="w-full h-full" />
                     </div>
                     <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isProfileMenuOpen ? "rotate-180" : ""}`} />
                   </button>
@@ -273,7 +333,7 @@ const Navigation = () => {
                     <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                       <div className="px-4 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shadow-sm">
-                          <img src={profileImage || getProfileImageUrl(null)} alt="p" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = getProfileImageUrl(null) }} />
+                          <Avatar name={user?.name} src={profileImage} className="w-full h-full" />
                         </div>
                         <div className="overflow-hidden">
                           <p className="font-semibold text-slate-900 text-sm truncate tracking-tight">{user.name}</p>

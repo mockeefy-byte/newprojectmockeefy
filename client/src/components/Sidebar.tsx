@@ -4,7 +4,7 @@ import {
   UserCircle,
   Calendar,
   Video,
-  Briefcase,
+  BookOpen,
   ChevronRight,
   TrendingUp,
   ShieldCheck,
@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { getProfileImageUrl } from "../lib/imageUtils";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { ProUpgradeCard } from "./ProUpgradeCard";
+import Avatar from "./ui/avatar";
 
 const Sidebar = () => {
   const { user } = useAuth();
@@ -50,6 +51,16 @@ const Sidebar = () => {
     profileImage: null,
     profileCompletion: 65,
   };
+
+  const roleLine = (() => {
+    const data: any = userProfile?.data;
+    const expList = Array.isArray(data?.experience) ? data.experience : [];
+    const current = expList.find((e: any) => e?.current && e?.position) || expList.find((e: any) => e?.position);
+    const position = (current?.position || "").toString().trim();
+    if (position) return position;
+    // Fallback: if user hasn’t added experience, show Fresher.
+    return "Fresher";
+  })();
 
   const NavItem = ({ icon: Icon, label, path, active }: any) => (
     <button
@@ -93,17 +104,20 @@ const Sidebar = () => {
                   strokeLinecap="round"
                 />
               </svg>
-              <img
-                src={getProfileImageUrl(user?.profileImage ?? displayProfile.profileImage)}
-                alt={displayProfile.name}
-                className="w-8 h-8 rounded-full object-cover border-2 border-white absolute bg-slate-50"
-                onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
-              />
+              <div className="w-8 h-8 rounded-full border-2 border-white absolute bg-slate-50 overflow-hidden">
+                <Avatar
+                  name={displayProfile.name}
+                  src={(user as any)?.profileImage ?? (displayProfile as any)?.profileImage}
+                  className="w-full h-full"
+                />
+              </div>
             </div>
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-elite truncate tracking-tight">{displayProfile.name}</h3>
-            <p className="text-[8px] font-black text-blue-600 tracking-widest mt-1 uppercase">Tier-1 Profile</p>
+            <p className="text-[8px] font-black text-blue-600 tracking-widest mt-1 uppercase truncate">
+              {roleLine}
+            </p>
           </div>
         </div>
         <button
@@ -118,10 +132,10 @@ const Sidebar = () => {
       <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-sm space-y-1">
         <NavItem icon={User} label="Overview" path="/" active={location.pathname === "/" || location.pathname === "/dashboard"} />
         <NavItem icon={UserCircle} label="Profile" path="/profile" active={location.pathname === "/profile"} />
-        <NavItem icon={Calendar} label="Sessions" path="/my-sessions" active={location.pathname === "/my-sessions" && (!location.search || !location.search.includes('view='))} />
-        <NavItem icon={Briefcase} label="Career Hub" path="/my-sessions?view=jobs" active={location.pathname === "/my-sessions" && location.search.includes('view=jobs')} />
-        <NavItem icon={Bookmark} label="Saved Experts" path="/my-sessions?view=saved" active={location.pathname === "/my-sessions" && location.search.includes('view=saved')} />
-        <NavItem icon={Award} label="Certificates" path="/my-sessions?view=certificates" active={location.pathname === "/my-sessions" && location.search.includes('view=certificates')} />
+        <NavItem icon={Calendar} label="Sessions" path="/my-sessions" active={location.pathname === "/my-sessions"} />
+        <NavItem icon={BookOpen} label="Interview tips" path="/tips" active={location.pathname === "/tips"} />
+        <NavItem icon={Bookmark} label="Saved Experts" path="/saved-experts" active={location.pathname === "/saved-experts"} />
+        <NavItem icon={Award} label="Certificates" path="/certificates" active={location.pathname === "/certificates"} />
       </div>
 
       {/* CARD 3: UPGRADE */}
@@ -164,17 +178,7 @@ const Sidebar = () => {
         </div>
       )}
 
-      {/* CARD 5: STATS */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-sm grid grid-cols-2 gap-2">
-        <div className="bg-slate-50/50 p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 group">
-          <TrendingUp size={12} className="text-slate-300 group-hover:text-emerald-500" />
-          <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">92% Skill</span>
-        </div>
-        <div className="bg-slate-50/50 p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 group">
-          <ShieldCheck size={12} className="text-slate-300 group-hover:text-amber-500" />
-          <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">TOP 5%</span>
-        </div>
-      </div>
+      {/* Stats card removed (Skills / Top 5%) */}
     </div>
   );
 };

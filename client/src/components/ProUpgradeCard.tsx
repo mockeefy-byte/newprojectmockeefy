@@ -32,10 +32,10 @@ export const ProUpgradeCard = () => {
             {/* Features List */}
             <ul className="relative z-10 space-y-2.5 mb-5">
                 {[
-                    "Unlimited AI Mocks",
-                    "Expert Referrals",
-                    "Priority Support",
-                    "AI Enhanced Profile"
+                    "Unlimited mock sessions",
+                    "Expert referrals",
+                    "Priority support",
+                    "Enhanced profile"
                 ].map((feature, i) => (
                     <li key={i} className="flex items-center gap-2.5 text-xs font-medium text-gray-700">
                         <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center shrink-0">

@@ -11,65 +11,65 @@ import {
 import Swal from "sweetalert2";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
+import ExpertsListForBooking from "./ExpertsListForBooking";
 import { mapExpertToProfile, Profile } from "../lib/bookSessionUtils";
+import DashboardLayout from "./DashboardLayout";
 
 /**
  * Enhanced Skeleton Loader matching the LinkedIn-style design
  */
 const BookSessionSkeleton = () => (
-  <div className="min-h-screen bg-[#f3f2ef] pb-20 lg:pb-0">
-    <Navigation />
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-pulse">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Content Skeleton */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Profile Header Skeleton */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="h-48 bg-gray-200"></div>
-            <div className="px-6 pb-6 relative">
-              <div className="absolute -top-16 left-6 w-32 h-32 rounded-full border-4 border-white bg-gray-100 shadow-sm"></div>
-              <div className="mt-20 space-y-3">
-                <div className="h-8 bg-gray-200 w-64 rounded-lg"></div>
-                <div className="h-4 bg-gray-200 w-96 rounded"></div>
-                <div className="h-4 bg-gray-200 w-48 rounded"></div>
-              </div>
-              <div className="mt-6 flex gap-3">
-                <div className="h-10 bg-gray-200 w-32 rounded-full"></div>
-                <div className="h-10 bg-gray-200 w-32 rounded-full"></div>
-              </div>
+  <DashboardLayout>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
+      {/* Main Content Skeleton */}
+      <div className="lg:col-span-8 space-y-6">
+        {/* Profile Header Skeleton */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="h-48 bg-gray-200"></div>
+          <div className="px-6 pb-6 relative">
+            <div className="absolute -top-16 left-6 w-32 h-32 rounded-full border-4 border-white bg-gray-100 shadow-sm"></div>
+            <div className="mt-20 space-y-3">
+              <div className="h-8 bg-gray-200 w-64 rounded-lg"></div>
+              <div className="h-4 bg-gray-200 w-96 rounded"></div>
+              <div className="h-4 bg-gray-200 w-48 rounded"></div>
             </div>
-          </div>
-
-          {/* Details Content Skeleton */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-            <div className="h-6 bg-gray-200 w-48 rounded"></div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="h-24 bg-gray-100 rounded-xl"></div>
-              <div className="h-24 bg-gray-100 rounded-xl"></div>
-              <div className="h-24 bg-gray-100 rounded-xl"></div>
-            </div>
-            <div className="space-y-3">
-              <div className="h-4 w-full bg-gray-50 rounded"></div>
-              <div className="h-4 w-full bg-gray-50 rounded"></div>
-              <div className="h-4 w-3/4 bg-gray-50 rounded"></div>
+            <div className="mt-6 flex gap-3">
+              <div className="h-10 bg-gray-200 w-32 rounded-full"></div>
+              <div className="h-10 bg-gray-200 w-32 rounded-full"></div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar Skeleton */}
-        <div className="hidden lg:block lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-xl p-6 border border-gray-200">
-            <div className="h-6 bg-gray-200 w-2/3 rounded mb-6"></div>
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-14 bg-gray-100 rounded-lg"></div>)}
-            </div>
-            <div className="mt-8 h-12 bg-gray-200 w-full rounded-xl"></div>
+        {/* Details Content Skeleton */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+          <div className="h-6 bg-gray-200 w-48 rounded"></div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-24 bg-gray-100 rounded-xl"></div>
+            <div className="h-24 bg-gray-100 rounded-xl"></div>
+            <div className="h-24 bg-gray-100 rounded-xl"></div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-4 w-full bg-gray-50 rounded"></div>
+            <div className="h-4 w-full bg-gray-50 rounded"></div>
+            <div className="h-4 w-3/4 bg-gray-50 rounded"></div>
           </div>
         </div>
       </div>
+
+      {/* Right column placeholder so layout feels consistent */}
+      <div className="hidden lg:block lg:col-span-4 space-y-6">
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <div className="h-6 bg-gray-200 w-2/3 rounded mb-6"></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-14 bg-gray-100 rounded-lg"></div>
+            ))}
+          </div>
+          <div className="mt-8 h-12 bg-gray-200 w-full rounded-xl"></div>
+        </div>
+      </div>
     </div>
-    <Footer />
-  </div>
+  </DashboardLayout>
 );
 
 const BookSessionPage = () => {
@@ -498,18 +498,26 @@ const BookSessionPage = () => {
     }
   };
 
+  if (!expertId) {
+    return (
+      <DashboardLayout>
+        <ExpertsListForBooking />
+      </DashboardLayout>
+    );
+  }
+
   if (loading) return <BookSessionSkeleton />;
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f3f2ef]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center bg-white p-8 rounded-xl shadow-sm border border-gray-200">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">{errorValue || "Profile Not Found"}</h2>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/book-session")}
             className="px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors font-medium"
           >
-            Return to Home
+            Back to Experts List
           </button>
         </div>
       </div>
@@ -977,7 +985,7 @@ const BookSessionPage = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-[#f3f2ef] pb-10">
+      <div className="min-h-screen bg-white pb-10">
         <Navigation />
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7">

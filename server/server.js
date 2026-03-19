@@ -35,6 +35,7 @@ import pricingRoutes from "./routes/pricingRoutes.js";
 import savedExpertRoutes from "./routes/savedExpertRoutes.js";
 import certificationRoutes from "./routes/certificationRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
+import tipsRoutes from "./routes/tipsRoutes.js";
 
 await connectDB();
 // Seeding on startup
@@ -157,8 +158,7 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/user/saved-experts', savedExpertRoutes);
 app.use('/api/certifications', certificationRoutes);
 app.use('/api/jobs', jobRoutes);
-
-
+app.use('/api/tips', tipsRoutes);
 
 const PORT = process.env.PORT || 5000;
 

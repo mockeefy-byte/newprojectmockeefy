@@ -10,8 +10,17 @@ interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
-/** Show left sidebar only on Overview (/). On Sessions and Profile, hide it so only main content (experts, profile, sessions) shows. */
-const SHOW_LEFT_SIDEBAR_PATHS = ["/"];
+/** Left sidebar (quick nav) on main user pages. */
+const SHOW_LEFT_SIDEBAR_PATHS = [
+    "/",
+    "/profile",
+    "/my-sessions",
+    "/book-session",
+    "/tips",
+    "/career-hub",
+    "/saved-experts",
+    "/certificates",
+];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const { pathname } = useLocation();
@@ -21,7 +30,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const showLeftSidebar = (isLoggedIn || showSkeletons) && SHOW_LEFT_SIDEBAR_PATHS.includes(pathname);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
             {/* Top Navigation - Sticky */}
             <div className="sticky top-0 z-50">
                 <Navigation />
@@ -33,8 +42,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
                     {/* Left Sidebar - only on Overview (/) ; on Sessions/Profile only main content (experts etc.) shows */}
                     {showLeftSidebar && (
-                        <aside className="hidden lg:block w-[240px] shrink-0 space-y-4 sticky top-16 self-start">
-                            {showSkeletons ? <SkeletonSidebar /> : <Sidebar />}
+                        <aside className="hidden lg:block w-[240px] shrink-0 sticky top-16 self-start">
+                            <div className="space-y-4">
+                                {showSkeletons ? <SkeletonSidebar /> : <Sidebar />}
+                            </div>
                         </aside>
                     )}
 
@@ -45,12 +56,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
                     {/* Right Sidebar - Desktop xl; on mobile/tablet shown below main */}
                     {(isLoggedIn || showSkeletons) && (
-                        <aside className="hidden xl:block w-[280px] shrink-0 space-y-4 sticky top-16 self-start">
-                            {showSkeletons ? <SkeletonInfoPanel /> : <InfoPanel />}
+                        <aside className="hidden xl:block w-[280px] shrink-0 sticky top-16 self-start">
+                            <div className="space-y-4">
+                                {showSkeletons ? <SkeletonInfoPanel /> : <InfoPanel />}
+                            </div>
                         </aside>
                     )}
                 </div>
-                {/* Intelligence & Referral Pipeline below main on mobile and tablet */}
+                {/* Book experts & pipeline below main on mobile and tablet */}
                 {(isLoggedIn || showSkeletons) && (
                     <div className="xl:hidden w-full mt-6 lg:mt-8">
                         {showSkeletons ? <SkeletonInfoPanel /> : <InfoPanel fullWidth />}

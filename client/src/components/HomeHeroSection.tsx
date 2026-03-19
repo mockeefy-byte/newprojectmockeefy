@@ -54,7 +54,7 @@ export default function HomeHeroSection({ showCertProgress = true }: HomeHeroSec
               ) : isEligible ? (
                 <Button
                   size="sm"
-                  onClick={() => navigate("/my-sessions?view=certificates")}
+                  onClick={() => navigate("/certificates")}
                   className="bg-white text-[#004fcb] hover:bg-blue-50 font-semibold rounded-xl shadow-lg"
                 >
                   Get your certificate

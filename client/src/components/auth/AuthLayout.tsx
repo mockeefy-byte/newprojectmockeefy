@@ -4,6 +4,7 @@
  */
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
+import MockeefyLogo from "../MockeefyLogo";
 /** Auth left-panel image: from public folder (client/public/images/) */
 const AUTH_IMAGE = "/images/login_mockeefy.png?v=1";
 
@@ -35,8 +36,8 @@ export default function AuthLayout({ children, title }: AuthLayoutProps) {
         />
         <div className="relative z-10 flex flex-col justify-center px-8 py-12 lg:px-12 lg:py-16">
           <Link to="/" className="inline-flex items-center gap-2 w-fit mb-8 lg:mb-12">
-            <img src="/mockeefy.png" alt="Mockeefy" className="h-10 w-auto object-contain" />
-            <span className="text-2xl font-bold tracking-tight text-white">Mockeefy</span>
+            <MockeefyLogo className="h-10 w-10" variant="mono" />
+            <span className="text-2xl font-logo tracking-tight text-white">Mockeefy</span>
           </Link>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 border border-white/25 w-fit mb-6">
             <Sparkles className="w-4 h-4 text-amber-200" />
@@ -55,10 +56,6 @@ export default function AuthLayout({ children, title }: AuthLayoutProps) {
       {/* Right: Form area */}
       <div className="flex-1 flex items-center justify-center bg-slate-50 px-4 py-8 lg:py-12">
         <div className="w-full max-w-[400px]">
-          <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
-            <img src="/mockeefy.png" alt="Mockeefy" className="h-9 w-auto" />
-            <span className="text-xl font-bold text-[#004fcb]">Mockeefy</span>
-          </div>
           {children}
         </div>
       </div>

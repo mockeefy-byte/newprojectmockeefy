@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Calendar, User, Award, Settings, LogOut, FileText } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import MockeefyLogo from "./MockeefyLogo";
 
 export type NavItem = {
   id: string;
@@ -45,10 +46,8 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
       <aside className={`hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 min-h-screen ${className}`}>
         <div className="h-[80px] flex items-center px-6 border-b border-blue-50/50 overflow-hidden">
           <div className="relative flex items-center w-full h-full gap-3">
-            <div className="w-8 h-8 bg-[#004fcb] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <span className="text-white font-bold text-lg">M</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900 font-['Outfit']">Mockeefy</span>
+            <MockeefyLogo className="h-9 w-9" variant="brand" />
+            <span className="text-xl font-logo tracking-tight text-gray-900">Mockeefy</span>
           </div>
         </div>
 
@@ -122,10 +121,8 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
         <div className={`absolute inset-y-0 left-0 w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 h-[80px]">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#004fcb] rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
-              <span className="text-xl font-bold tracking-tight text-gray-900 font-['Outfit']">Mockeefy</span>
+              <MockeefyLogo className="h-9 w-9" variant="brand" />
+              <span className="text-xl font-logo tracking-tight text-gray-900">Mockeefy</span>
             </div>
             <button type="button" onClick={onClose} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-md">
               <span className="sr-only">Close menu</span>

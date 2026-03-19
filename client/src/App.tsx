@@ -29,13 +29,15 @@ import SkillsPage from "./pages/expert/Skills";
 import ExpertReports from "./pages/expert/Reports";
 import SettingsPage from "./pages/expert/Settings";
 import LiveMeeting from "./pages/LiveMeeting";
+import TipsPage from "./pages/TipsPage";
+import CertificatesPage from "./pages/CertificatesPage";
 import ScrollToTop from "./ScrollToTop";
 import UserProfile from "./pages/UserProfile";
 import Notifications from "./pages/Notifications";
 import WatchMock from "./pages/WatchMock";
 import AiInterview from "./pages/AiInterview";
-import JobReferral from "./pages/JobReferral";
 import SubscriptionPlans from "./pages/SubscriptionPlans";
+import UserShell from "./components/UserShell";
 
 import PendingExpertsTable from "./components/PendingExpertsTable";
 import RejectedExpertsTable from "./components/RejectedExpertsTable";
@@ -46,7 +48,6 @@ import SessionManagement from "./components/SessionManagement";
 import VerifiedExpertsTable from "./components/VerifiedExpertsTable";
 import UsersTable from "./components/UsersTable";
 import PricingRules from "./pages/admin/PricingRules";
-import PricingMatrix from "./pages/admin/PricingMatrix";
 import CertificationRules from "./pages/admin/CertificationRules";
 import HrContacts from "./pages/admin/HrContacts";
 
@@ -114,10 +115,17 @@ function AppRoutes() {
           <Route path="/ai-video" element={<AiInterview />} />
           <Route path="/book-session" element={<BookSessionPage />} />
           <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/my-sessions" element={<MySessions />} />
           <Route path="/live-meeting/:sessionId?" element={<LiveMeeting />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/notifications" element={<Notifications />} />
+
+          {/* App shell (keeps nav/side panels stable, no flicker) */}
+          <Route element={<UserShell />}>
+            <Route path="/my-sessions" element={<MySessions />} />
+            <Route path="/saved-experts" element={<MySessions initialViewOverride="saved" />} />
+            <Route path="/tips" element={<TipsPage />} />
+            <Route path="/certificates" element={<CertificatesPage />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/notifications" element={<Notifications />} />
+          </Route>
         </Route>
 
 

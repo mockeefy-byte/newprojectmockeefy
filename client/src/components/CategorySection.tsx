@@ -64,9 +64,14 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
         <section className="w-full max-w-full mb-8 bg-white border border-slate-200/80 rounded-2xl p-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 group/section">
             {/* Header - Unified with Card */}
             <div className="flex items-center justify-between px-4 sm:px-5 md:px-6 py-3 border-b border-slate-100 bg-slate-50/10">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-elite-blue shadow-[0_0_8px_rgba(0,79,203,0.5)]" aria-hidden />
-                    <h2 className="font-elite leading-none text-gray-900">{title}</h2>
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-elite-blue shadow-[0_0_8px_rgba(0,79,203,0.5)] shrink-0" aria-hidden />
+                    <div className="min-w-0">
+                        <h2 className="font-elite leading-none text-gray-900 truncate">{title}</h2>
+                        <span className="block text-[11px] text-slate-500 font-medium mt-1 truncate">
+                            Browse experts in {title}{profiles?.length ? ` • ${profiles.length} available` : ""}
+                        </span>
+                    </div>
                 </div>
                 {onSeeAll && (
                     <button

@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import axios from "../lib/axios";
 import { useAuth } from "../context/AuthContext";
-import DashboardLayout from "../components/DashboardLayout";
 import PersonalInfoSection from "../components/profile/PersonalInfoSection";
 import EducationSection from "../components/profile/EducationSection";
 import ExperienceSection from "../components/profile/ExperienceSection";
@@ -53,7 +52,7 @@ export default function UserProfile() {
   const offset = circumference - (completion / 100) * circumference;
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-8 animate-in fade-in duration-500 pb-10">
         {/* Profile Readiness strip — same style as Sessions "Operational Intel" */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_20px_-6px_rgba(0,0,0,0.04)] overflow-hidden">
@@ -181,6 +180,6 @@ export default function UserProfile() {
       </div>
 
       <ResumePreview isOpen={isResumeOpen} onClose={() => setIsResumeOpen(false)} />
-    </DashboardLayout>
+    </>
   );
 }

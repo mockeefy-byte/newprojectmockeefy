@@ -1,48 +1,40 @@
-import * as React from "react"
-import * as AvatarPrimitive from "@radix-ui/react-avatar"
+import React, { useMemo, useState } from "react";
+import { getProfileImageUrl } from "../../lib/imageUtils";
 
-import { cn } from "../../lib/utils"
+type Props = {
+  name?: string | null;
+  src?: string | null;
+  className?: string;
+};
 
-const Avatar = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
-      className
-    )}
-    {...props}
-  />
-))
-Avatar.displayName = AvatarPrimitive.Root.displayName
+/**
+ * Simple avatar:
+ * - If `src` is available and loads, show image
+ * - Else show first letter (no default placeholder image)
+ */
+export default function Avatar({ name, src, className }: Props) {
+  const [failed, setFailed] = useState(false);
+  const initial = useMemo(() => {
+    const n = (name || "").trim();
+    return n ? n[0]!.toUpperCase() : "U";
+  }, [name]);
 
-const AvatarImage = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Image>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-))
-AvatarImage.displayName = AvatarPrimitive.Image.displayName
+  const shouldShowImage = !!src && !failed;
 
-const AvatarFallback = React.forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Fallback>,
-  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Fallback
-    ref={ref}
-    className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
-      className
-    )}
-    {...props}
-  />
-))
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
-
-export { Avatar, AvatarImage, AvatarFallback }
+  return (
+    <div className={`relative overflow-hidden ${className || ""}`}>
+      {shouldShowImage ? (
+        <img
+          src={getProfileImageUrl(src)}
+          alt={name || "User"}
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-blue-50 text-elite-blue font-black">
+          <span className="leading-none">{initial}</span>
+        </div>
+      )}
+    </div>
+  );
+}

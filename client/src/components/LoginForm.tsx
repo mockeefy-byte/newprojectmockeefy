@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "./auth/AuthLayout";
 import { GoogleAuthButton } from "./auth/GoogleAuthButton";
+import MockeefyLogo from "./MockeefyLogo";
 
 export const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -86,6 +87,11 @@ export const LoginForm = () => {
   return (
     <AuthLayout title="Sign in">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-6 sm:p-8">
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <MockeefyLogo className="h-12 w-12" variant="brand" />
+          <span className="text-2xl font-logo tracking-tight text-[#004fcb]">Mockeefy</span>
+        </div>
+
         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Welcome back</h2>
         <p className="text-slate-500 text-sm mt-1">Sign in to your account to continue</p>
 

@@ -40,7 +40,7 @@ const ModernHeroBanner = () => {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-black mb-8 leading-[1.1] tracking-tighter text-slate-900">
-            Your Intel-Driven
+            Book real
             <br />
             <span className="relative inline-block mt-4 text-elite-blue">
               {roles.map((role, idx) => (
@@ -57,17 +57,17 @@ const ModernHeroBanner = () => {
           </h1>
 
           <p className="text-lg text-slate-500 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
-            Master evaluations with AI-powered mock sessions and real HR intelligence.
-            Build your high-density profile for global tech firms.
+            Master evaluations with live mock sessions from verified experts.
+            Book sessions, get feedback, and build your profile for top firms.
           </p>
 
-          {/* Feature Pills - Tight & Professional */}
+          {/* Feature Pills - Book experts & related only */}
           <div className="flex flex-wrap justify-center gap-2.5 mb-14">
             {[
-              { text: "AI Evaluation", icon: Zap },
-              { text: "HR Intelligence", icon: ShieldCheck },
-              { text: "24/7 Access", icon: Globe },
-              { text: "Tier-1 Prep", icon: Sparkles }
+              { text: "Book experts", icon: Zap },
+              { text: "Live mocks", icon: ShieldCheck },
+              { text: "24/7 booking", icon: Globe },
+              { text: "Tier-1 prep", icon: Sparkles }
             ].map((feature, idx) => (
               <div key={idx} className="px-5 py-2 bg-slate-50/80 border border-slate-100 rounded-xl text-[10px] font-black text-slate-600 tracking-tight flex items-center gap-2 hover:bg-white hover:border-blue-100 transition-all shadow-sm">
                 <feature.icon className="w-3.5 h-3.5 text-elite-blue" />

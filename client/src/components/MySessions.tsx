@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Calendar,
@@ -14,7 +14,6 @@ import {
   Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "./DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import axios from '../lib/axios';
 import { getProfileImageUrl } from "../lib/imageUtils";
@@ -110,12 +109,12 @@ function getSessionTimeAndCountdown(session: Session, now: Date): { timeLabel: s
   return { timeLabel, countdown: `Starts in ${m}:${s.toString().padStart(2, '0')}`, joinable: false };
 }
 
-const MySessions = () => {
+const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' | 'jobs' | 'saved' } = {}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const initialView = (searchParams.get('view') as any) || 'overview';
+  const initialView = (initialViewOverride || (searchParams.get('view') as any) || 'overview') as any;
 
   const [activeView, setActiveView] = useState(initialView);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -123,9 +122,17 @@ const MySessions = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    if (initialViewOverride) {
+      setActiveView(initialViewOverride);
+      return;
+    }
     const view = new URLSearchParams(location.search).get('view');
+    if (view === 'certificates') {
+      navigate('/certificates', { replace: true });
+      return;
+    }
     if (view) setActiveView(view);
-  }, [location.search]);
+  }, [location.search, initialViewOverride]);
 
   const [savedExperts, setSavedExperts] = useState<any[]>([]);
   const [reviewModalSession, setReviewModalSession] = useState<Session | null>(null);
@@ -133,6 +140,27 @@ const MySessions = () => {
   const [reviewForm, setReviewForm] = useState({ overallRating: 5, technicalRating: 5, communicationRating: 5, feedback: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [now, setNow] = useState(() => new Date());
+
+  // Bookings list: newest first + pagination
+  const sortedSessions = useMemo(() => {
+    return [...sessions].sort(
+      (a, b) => new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime()
+    );
+  }, [sessions]);
+
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(sortedSessions.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage(1);
+  }, [sortedSessions.length]);
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const pageStartIdx = (page - 1) * PAGE_SIZE;
+  const pageEndIdx = Math.min(sortedSessions.length, pageStartIdx + PAGE_SIZE);
+  const pagedSessions = sortedSessions.slice(pageStartIdx, pageEndIdx);
 
   // Tick every second when on overview and there are upcoming sessions (for countdown)
   useEffect(() => {
@@ -236,8 +264,7 @@ const MySessions = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      <div className="space-y-8 animate-in fade-in duration-500 pb-10 max-w-5xl mx-auto">
 
         {/* EXECUTIVE DASHBOARD PANEL - OVERVIEW */}
         {activeView === 'overview' && (
@@ -248,36 +275,20 @@ const MySessions = () => {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2.5">
                     <Sparkles className="w-4 h-4 text-elite-blue" />
-                    <h2 className="font-elite leading-none">My Simulations</h2>
+                    <h1 className="font-elite leading-none text-slate-900">My Bookings</h1>
                   </div>
-                  <p className="text-[10px] text-slate-500 font-medium">Your bookings appear here — view and join sessions</p>
+                  <p className="text-[10px] text-slate-500 font-medium">All bookings — view and join sessions</p>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Certification Progress */}
-                  <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-                    <div className="flex flex-col">
-                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter">Certification Pipeline</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3].map((i) => (
-                            <div
-                              key={i}
-                              className={`w-3 h-1 rounded-full ${i <= sessions.filter(s => s.status === 'Completed').length ? 'bg-elite-blue' : 'bg-slate-200'}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-[9px] font-black text-elite-blue leading-none">
-                          {Math.min(3, sessions.filter(s => s.status === 'Completed').length)}/3
-                        </span>
-                      </div>
-                    </div>
-                    <Award size={14} className={sessions.filter(s => s.status === 'Completed').length >= 3 ? "text-elite-blue" : "text-slate-300"} />
-                  </div>
-
                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 text-elite-blue border border-blue-100">
                     <span className="w-1 h-1 rounded-full bg-blue-500"></span>
-                    <span className="text-[8px] font-black tracking-tight uppercase">Active Studio</span>
+                    <span className="text-[8px] font-black tracking-tight uppercase">Bookings</span>
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total</span>
+                    <span className="text-[10px] font-black text-slate-700 tabular-nums">{sortedSessions.length}</span>
                   </div>
                 </div>
               </div>
@@ -287,44 +298,44 @@ const MySessions = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider">Session</th>
-                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider hidden sm:table-cell">Date & time</th>
-                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-3.5 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Action</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Session</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Date & time</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {loading ? (
                       [1, 2, 3].map(i => (
                         <tr key={i} className="animate-pulse">
-                          <td colSpan={4} className="px-5 py-4"><div className="h-10 bg-slate-50 rounded-xl" /></td>
+                          <td colSpan={4} className="px-6 py-5"><div className="h-10 bg-slate-50 rounded-xl" /></td>
                         </tr>
                       ))
-                    ) : sessions.length > 0 ? (
-                      sessions.slice(0, 10).map(session => {
+                    ) : pagedSessions.length > 0 ? (
+                      pagedSessions.map(session => {
                         const displayStatus = getDisplayStatus(session);
                         const { timeLabel, countdown, joinable } = getSessionTimeAndCountdown(session, now);
                         return (
                           <tr key={session.id} className="group hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-4">
+                            <td className="px-6 py-5">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 p-0.5 shadow-sm shrink-0">
                                   <img src={getProfileImageUrl(session.profileImage)} alt="" className="w-full h-full object-cover rounded-lg" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-black text-slate-900 text-[12px] tracking-tight truncate">Your session with {session.expert}</p>
-                                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{session.category} Simulation</p>
+                                  <p className="font-bold text-slate-900 text-sm truncate">Your session with {session.expert}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5 truncate">{session.category} Simulation</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-4 hidden sm:table-cell">
-                              <p className="text-[11px] font-bold text-slate-800">{session.startTime ? new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>
-                              <p className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                            <td className="px-6 py-5 hidden sm:table-cell">
+                              <p className="text-sm font-bold text-slate-700">{session.startTime ? new Date(session.startTime).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>
+                              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                                 <Clock size={12} className="text-slate-400" />
                                 {timeLabel}
                               </p>
                             </td>
-                            <td className="px-5 py-4">
+                            <td className="px-6 py-5">
                               {countdown ? (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
                                   <Clock size={12} />
@@ -334,30 +345,30 @@ const MySessions = () => {
                                 <StatusBadge status={displayStatus} />
                               )}
                             </td>
-                            <td className="px-5 py-4 text-right">
+                            <td className="px-6 py-5 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 {displayStatus === 'Completed' ? (
                                   session.candidateReview ? (
                                     <button
                                       onClick={() => setCertificateModalSession(session)}
-                                      className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 hover:text-elite-blue hover:border-blue-200 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
+                                      className="px-4 py-2 border border-slate-200 hover:border-elite-blue hover:text-elite-blue text-slate-600 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
                                     >
-                                      <Award size={12} strokeWidth={2.5} />
+                                      <Award size={14} />
                                       <span>View Certificate</span>
                                     </button>
                                   ) : (
                                     <button
                                       onClick={() => setReviewModalSession(session)}
-                                      className="px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-xl transition-all text-[10px] font-bold flex items-center gap-1.5"
+                                      className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
                                     >
-                                      <MessageSquare size={12} strokeWidth={2.5} />
+                                      <MessageSquare size={14} />
                                       <span>Give Review</span>
                                     </button>
                                   )
                                 ) : joinable ? (
                                   <button
                                     onClick={() => handleJoin(session)}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-elite-blue hover:bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-tight transition-all shadow-sm active:scale-95"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-elite-blue hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
                                   >
                                     Join Now <ChevronRight size={12} strokeWidth={3} />
                                   </button>
@@ -378,10 +389,10 @@ const MySessions = () => {
                       })
                     ) : (
                       <tr>
-                        <td colSpan={4} className="px-5 py-16 text-center">
+                        <td colSpan={4} className="px-6 py-16 text-center">
                           <Briefcase className="w-10 h-10 text-slate-200 mx-auto mb-3" />
                           <p className="text-slate-600 font-semibold text-sm">No bookings yet</p>
-                          <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">This is where your booked sessions will show. Book one from the home page or an expert profile.</p>
+                          <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">Your bookings will show here after you book a session.</p>
                           <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
                             Book a session
                           </button>
@@ -392,14 +403,45 @@ const MySessions = () => {
                 </table>
               </div>
 
+              {/* Pagination footer (desktop) */}
+              {!loading && sortedSessions.length > 0 && (
+                <div className="hidden md:flex items-center justify-between px-5 py-4 border-t border-slate-100 bg-white">
+                  <div className="text-[10px] font-bold text-slate-500">
+                    Showing <span className="text-slate-700 tabular-nums">{pageStartIdx + 1}</span>–<span className="text-slate-700 tabular-nums">{pageEndIdx}</span> of{" "}
+                    <span className="text-slate-700 tabular-nums">{sortedSessions.length}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-[10px] font-black hover:border-elite-blue hover:text-elite-blue disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all"
+                    >
+                      Prev
+                    </button>
+                    <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-700 tabular-nums">
+                      Page {page} / {totalPages}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-[10px] font-black hover:border-elite-blue hover:text-elite-blue disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:text-slate-600 transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Mobile: card layout */}
               <div className="md:hidden divide-y divide-slate-100">
                 {loading ? (
                   [1, 2, 3].map(i => (
                     <div key={i} className="p-4 animate-pulse"><div className="h-24 bg-slate-50 rounded-xl" /></div>
                   ))
-                ) : sessions.length > 0 ? (
-                  sessions.slice(0, 10).map(session => {
+                ) : pagedSessions.length > 0 ? (
+                  pagedSessions.map(session => {
                     const displayStatus = getDisplayStatus(session);
                     const { timeLabel, countdown, joinable } = getSessionTimeAndCountdown(session, now);
                     return (
@@ -457,13 +499,38 @@ const MySessions = () => {
                   <div className="p-8 text-center">
                     <Briefcase className="w-8 h-8 text-slate-200 mx-auto mb-3" />
                     <p className="text-slate-500 text-sm font-medium">No bookings yet</p>
-                    <p className="text-slate-400 text-xs mt-1">Your booked sessions will show here.</p>
+                    <p className="text-slate-400 text-xs mt-1">Your bookings will show here after you book a session.</p>
                     <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
                       Book a session
                     </button>
                   </div>
                 )}
               </div>
+
+              {/* Pagination footer (mobile) */}
+              {!loading && sortedSessions.length > 0 && (
+                <div className="md:hidden px-4 py-4 border-t border-slate-100 bg-white flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <div className="text-xs font-bold text-slate-600 tabular-nums">
+                    {pageStartIdx + 1}-{pageEndIdx} / {sortedSessions.length}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Saved Experts Preview (Optional, max 4) */}
@@ -711,7 +778,6 @@ const MySessions = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 };
 

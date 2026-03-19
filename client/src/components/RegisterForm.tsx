@@ -5,6 +5,7 @@ import api from "../lib/axios";
 import { isAxiosError } from "axios";
 import AuthLayout from "./auth/AuthLayout";
 import { GoogleAuthButton } from "./auth/GoogleAuthButton";
+import MockeefyLogo from "./MockeefyLogo";
 
 interface FormData {
   email: string;
@@ -136,6 +137,11 @@ export const RegisterForm = () => {
   return (
     <AuthLayout title="Sign up">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-6 sm:p-8">
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <MockeefyLogo className="h-12 w-12" variant="brand" />
+          <span className="text-2xl font-logo tracking-tight text-[#004fcb]">Mockeefy</span>
+        </div>
+
         <h2 className="text-xl font-bold text-slate-900 tracking-tight">
           {step === "email" ? "Create your account" : "Verify your email"}
         </h2>

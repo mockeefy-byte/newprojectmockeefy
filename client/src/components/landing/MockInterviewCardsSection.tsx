@@ -25,17 +25,17 @@ export default function MockInterviewCardsSection() {
         <div className="rounded-2xl bg-white border border-slate-200/80 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-[#004fcb]/20 transition-all duration-300">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#004fcb]/10 text-[#004fcb] text-xs font-semibold uppercase tracking-wider mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            Mockeefy AI
+            Book experts
           </div>
-          <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">AI-powered practice</h3>
+          <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-2">Book live mock sessions</h3>
           <p className="text-slate-600 text-sm md:text-base mb-6 leading-relaxed">
-            Use Mockeefy AI for instant mock sessions, tailored questions, and quick feedback—anytime you're ready to practice.
+            Choose your slot, pick a verified expert, and practice with real-time feedback. Join via Google Meet and get detailed feedback after each session.
           </p>
           <Link
-            to="/signup"
+            to="/book-session"
             className="inline-flex items-center gap-2 text-[#004fcb] font-bold hover:text-blue-700 transition-colors"
           >
-            Try Mockeefy AI
+            Book a session
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

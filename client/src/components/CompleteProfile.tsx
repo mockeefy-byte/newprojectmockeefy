@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "./auth/AuthLayout";
+import MockeefyLogo from "./MockeefyLogo";
 
 interface LocationState {
   email: string;
@@ -99,6 +100,11 @@ export default function CompleteProfile() {
   return (
     <AuthLayout title="Complete profile">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-6 sm:p-8">
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <MockeefyLogo className="h-12 w-12" variant="brand" />
+          <span className="text-2xl font-logo tracking-tight text-[#004fcb]">Mockeefy</span>
+        </div>
+
         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Complete your profile</h2>
         <p className="text-slate-500 text-sm mt-1">Add your details to get started</p>
 

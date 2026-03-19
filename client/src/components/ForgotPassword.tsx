@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import AuthLayout from "./auth/AuthLayout";
+import MockeefyLogo from "./MockeefyLogo";
 
 const inputClass =
   "w-full h-11 px-4 rounded-xl border-2 border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 focus:bg-white outline-none transition-all text-sm";
@@ -137,6 +138,11 @@ export default function ForgotPassword() {
   return (
     <AuthLayout title="Forgot password">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-6 sm:p-8">
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <MockeefyLogo className="h-12 w-12" variant="brand" />
+          <span className="text-2xl font-logo tracking-tight text-[#004fcb]">Mockeefy</span>
+        </div>
+
         <Link
           to="/signin"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4"

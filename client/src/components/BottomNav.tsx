@@ -1,4 +1,4 @@
-import { User, Settings2, LogOut, BookOpen, HelpCircle, Briefcase, X, PlayCircle, Calendar, Bot } from "lucide-react";
+import { User, Settings2, LogOut, BookOpen, HelpCircle, Briefcase, X, PlayCircle, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -79,14 +79,14 @@ const BottomNav = () => {
         </Link>
 
         <Link
-          to="/ai-video"
-          className={`relative flex flex-col items-center justify-center w-full h-16 transition-colors ${isActive('/ai-video') ? 'text-[#004fcb]' : 'text-gray-500 hover:text-gray-900'}`}
+          to="/book-session"
+          className={`relative flex flex-col items-center justify-center w-full h-16 transition-colors ${isActive('/book-session') ? 'text-[#004fcb]' : 'text-gray-500 hover:text-gray-900'}`}
         >
-          {isActive('/ai-video') && (
+          {isActive('/book-session') && (
             <div className="absolute top-0 w-12 h-1 bg-[#004fcb] rounded-b-full"></div>
           )}
-          <Bot size={24} className={isActive('/ai-video') ? "fill-current" : ""} strokeWidth={2} />
-          <span className="text-[10px] font-medium mt-1">AI Video</span>
+          <Briefcase size={24} className={isActive('/book-session') ? "fill-current" : ""} strokeWidth={2} />
+          <span className="text-[10px] font-medium mt-1">Experts</span>
         </Link>
 
         <button
