@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, Briefcase } from "lucide-react";
 import axios from '../../lib/axios';
 import { toast } from "sonner";
@@ -16,14 +16,31 @@ interface Experience {
 interface ExperienceSectionProps {
     profileData: {
         experience?: Experience[];
+        preferences?: {
+            experienceLevel?: string;
+            jobType?: string;
+            expectedSalary?: string | number;
+            noticePeriod?: string;
+            willingToRelocate?: boolean;
+        };
     } | null;
     onUpdate: () => void;
 }
 
 export default function ExperienceSection({ profileData, onUpdate }: ExperienceSectionProps) {
     const { user } = useAuth();
+    const userId = user?.id || user?._id || user?.userId;
     const [experience, setExperience] = useState<Experience[]>(profileData?.experience || []);
+    const [experienceLevel, setExperienceLevel] = useState<string>(profileData?.preferences?.experienceLevel || "");
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setExperience(profileData?.experience || []);
+    }, [profileData?.experience]);
+
+    useEffect(() => {
+        setExperienceLevel(profileData?.preferences?.experienceLevel || "");
+    }, [profileData?.preferences?.experienceLevel]);
 
     const addExperience = () => {
         setExperience([...experience, {
@@ -49,10 +66,21 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
     const handleSave = async () => {
         try {
             setSaving(true);
+
+            // Save only the selected experience level here.
+            // Do not send other preference fields from this screen to avoid accidental overwrite.
+            const prefPayload = { experienceLevel };
+
+            await axios.put(
+                "/api/user/profile/preferences",
+                prefPayload,
+                { headers: { userid: userId } }
+            );
+
             const response = await axios.put(
                 "/api/user/profile/experience",
                 { experience },
-                { headers: { userid: user?.id } }
+                { headers: { userid: userId } }
             );
 
             if (response.data.success) {
@@ -74,16 +102,51 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                     <h2 className="text-lg font-bold text-elite-black tracking-tight">Work Experience</h2>
                     <p className="text-[11px] text-slate-500 mt-0.5">Your professional background</p>
                 </div>
-                <button
-                    onClick={addExperience}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors text-[11px] font-bold"
-                >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add
-                </button>
+                {experienceLevel !== "Fresher" && (
+                    <button
+                        onClick={addExperience}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors text-[11px] font-bold"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add
+                    </button>
+                )}
             </div>
 
-            {experience.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Experience Type</label>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setExperienceLevel("Fresher")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                            experienceLevel === "Fresher"
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        }`}
+                    >
+                        Fresher
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setExperienceLevel("Experienced")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                            experienceLevel === "Experienced"
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                        }`}
+                    >
+                        Experienced
+                    </button>
+                </div>
+                {experienceLevel === "Fresher" && (
+                    <p className="text-[11px] text-slate-500 mt-2">
+                        Fresher selected. Work experience entries are optional. You can keep this empty.
+                    </p>
+                )}
+            </div>
+
+            {experienceLevel !== "Fresher" && experience.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-slate-100 bg-slate-50/50 rounded-xl">
                     <Briefcase className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-slate-500 text-[11px]">No experience added</p>
@@ -94,7 +157,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                         Add now
                     </button>
                 </div>
-            ) : (
+            ) : experienceLevel !== "Fresher" ? (
                 <div className="space-y-4">
                     {experience.map((exp, index) => (
                         <div key={index} className="border border-slate-200/80 bg-white rounded-xl p-4 relative shadow-sm hover:shadow-md transition-all group">
@@ -175,6 +238,14 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                             </div>
                         </div>
                     ))}
+                </div>
+            ) : null}
+
+            {experienceLevel === "Fresher" && (
+                <div className="text-center py-8 border border-dashed border-blue-200 bg-blue-50/40 rounded-xl">
+                    <Briefcase className="w-10 h-10 text-blue-300 mx-auto mb-2" />
+                    <p className="text-slate-600 text-sm font-semibold">Fresher Profile Selected</p>
+                    <p className="text-slate-500 text-[11px] mt-1">No prior company experience required.</p>
                 </div>
             )}
 

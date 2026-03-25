@@ -111,14 +111,45 @@ export default function Sessions() {
     const totalPages = Math.ceil(filteredSessions.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const currentSessions = filteredSessions.slice(startIndex, startIndex + itemsPerPage);
+    const selectedSessionId = activeSession?._id || null;
 
     useEffect(() => {
         setCurrentPage(1); // Reset page on filter change
     }, [searchTerm, statusFilter]);
 
+    // Auto-select first session on desktop so details are visible by default
+    useEffect(() => {
+        if (loadingSessions) return;
+        const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
+        if (!isDesktop) return;
+        if (!currentSessions.length) {
+            if (selectedSessionId) setActiveSession(null);
+            return;
+        }
+        const selectedStillVisible = selectedSessionId
+            ? currentSessions.some((session) => session._id === selectedSessionId)
+            : false;
+        if (!selectedStillVisible) {
+            setActiveSession(currentSessions[0]);
+        }
+    }, [loadingSessions, currentSessions, selectedSessionId]);
+
 
     // --- HANDLERS ---
     const handleJoin = async (session: Session) => {
+        const start = new Date(session.startTime);
+        const end = new Date(session.endTime);
+
+        // Strict validation: allow joining only from exact start time until end time.
+        if (currentTime < start) {
+            toast.error(`Session starts at ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Please wait for the timer.`);
+            return;
+        }
+        if (currentTime >= end) {
+            toast.error("This session has already ended.");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await axios.post(`/api/sessions/${session.sessionId}/join`, { userId: currentUserId });
@@ -188,8 +219,7 @@ export default function Sessions() {
     const isSessionActive = (session: Session) => {
         const start = new Date(session.startTime);
         const end = new Date(session.endTime);
-        const bufferStart = new Date(start.getTime() - 10 * 60 * 1000); // 10 mins early
-        return currentTime >= bufferStart && currentTime < end;
+        return currentTime >= start && currentTime < end;
     };
 
     const isSessionEnded = (session: Session) => {
@@ -202,18 +232,29 @@ export default function Sessions() {
 
         if (currentTime < start) {
             const diff = start.getTime() - currentTime.getTime();
-            const mins = Math.ceil(diff / 60000);
-            if (mins > 60) {
-                const hours = Math.ceil(mins / 60);
-                return { text: `Starts in ${hours}h`, color: 'text-blue-600 bg-blue-50' };
+            const totalSeconds = Math.max(0, Math.floor(diff / 1000));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            if (hours > 0) {
+                return {
+                    text: `Starts in ${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`,
+                    color: 'text-blue-600 bg-blue-50'
+                };
             }
-            return { text: `Starts in ${mins}m`, color: 'text-amber-600 bg-amber-50' };
+            return {
+                text: `Starts in ${minutes}:${seconds.toString().padStart(2, '0')}`,
+                color: 'text-amber-600 bg-amber-50'
+            };
         }
 
         if (currentTime >= start && currentTime < end) {
             const diff = end.getTime() - currentTime.getTime();
-            const mins = Math.ceil(diff / 60000);
-            return { text: `Ends in ${mins}m`, color: 'text-red-600 bg-red-50 animate-pulse' };
+            const totalSeconds = Math.max(0, Math.floor(diff / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return { text: `Ends in ${minutes}:${seconds.toString().padStart(2, '0')}`, color: 'text-red-600 bg-red-50 animate-pulse' };
         }
 
         return { text: 'Ended', color: 'text-gray-500 bg-gray-100' };
@@ -221,24 +262,64 @@ export default function Sessions() {
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'confirmed': return 'bg-green-100 text-green-700 border-green-200';
-            case 'completed': return 'bg-gray-100 text-gray-700 border-gray-200';
-            case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
-            default: return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'confirmed': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            case 'completed': return 'bg-slate-100 text-slate-700 border-slate-200';
+            case 'cancelled': return 'bg-rose-50 text-rose-700 border-rose-200';
+            default: return 'bg-blue-50 text-blue-700 border-blue-200';
         }
     };
+
+    const getSessionPhase = (session: Session) => {
+        const start = new Date(session.startTime);
+        const end = new Date(session.endTime);
+        if (currentTime < start) return { label: 'Upcoming', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+        if (currentTime >= start && currentTime < end) return { label: 'Live', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: 'Ended', className: 'bg-slate-100 text-slate-600 border-slate-200' };
+    };
+
+    const liveSessionsCount = allSessions.filter((session) => isSessionActive(session)).length;
+    const upcomingSessionsCount = allSessions.filter((session) => currentTime < new Date(session.startTime)).length;
+    const completedSessionsCount = allSessions.filter((session) => session.status.toLowerCase() === 'completed').length;
 
     if (!user) return <div className="p-8 text-center">Please log in to view sessions.</div>;
 
     return (
         <>
             <div className="h-full">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex flex-col overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
                     <div className="flex-1 flex min-h-0">
                         {/* --- LEFT SIDEBAR (SESSION LIST) --- */}
-                        <div className={`${activeSession ? 'hidden md:flex' : 'flex'} w-full md:w-80 border-r border-gray-200 bg-white flex-col shrink-0 transition-all duration-300`}>
+                        <div className={`${activeSession ? 'hidden md:flex' : 'flex'} w-full md:w-[360px] border-r border-slate-200 bg-white flex-col shrink-0 transition-all duration-300`}>
                             {/* Search & Filters */}
-                            <div className="p-4 border-b border-gray-100 space-y-3 bg-gray-50/50">
+                            <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/60">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Sessions Hub</p>
+                                        <h2 className="text-sm font-bold text-slate-900">Interview Sessions</h2>
+                                    </div>
+                                    <button
+                                        onClick={() => fetchSessions(true)}
+                                        className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-colors"
+                                        title="Refresh Sessions"
+                                        disabled={loadingSessions}
+                                    >
+                                        <RefreshCw className={`w-3.5 h-3.5 ${loadingSessions ? 'animate-spin' : ''}`} />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-2.5 py-2">
+                                        <p className="text-[10px] font-semibold text-emerald-700">Live</p>
+                                        <p className="text-sm font-black text-emerald-800 tabular-nums">{liveSessionsCount}</p>
+                                    </div>
+                                    <div className="rounded-xl border border-amber-100 bg-amber-50 px-2.5 py-2">
+                                        <p className="text-[10px] font-semibold text-amber-700">Upcoming</p>
+                                        <p className="text-sm font-black text-amber-800 tabular-nums">{upcomingSessionsCount}</p>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+                                        <p className="text-[10px] font-semibold text-slate-500">Completed</p>
+                                        <p className="text-sm font-black text-slate-700 tabular-nums">{completedSessionsCount}</p>
+                                    </div>
+                                </div>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input
@@ -250,7 +331,7 @@ export default function Sessions() {
                                     />
                                 </div>
                                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                    {['all', 'confirmed', 'completed'].map(status => (
+                                    {['all', 'confirmed', 'completed', 'cancelled'].map(status => (
                                         <button
                                             key={status}
                                             onClick={() => setStatusFilter(status)}
@@ -262,14 +343,6 @@ export default function Sessions() {
                                             {status.charAt(0).toUpperCase() + status.slice(1)}
                                         </button>
                                     ))}
-                                    <button
-                                        onClick={() => fetchSessions(true)}
-                                        className="p-1 px-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-blue-600 transition-colors"
-                                        title="Refresh Sessions"
-                                        disabled={loadingSessions}
-                                    >
-                                        <RefreshCw className={`w-3.5 h-3.5 ${loadingSessions ? 'animate-spin' : ''}`} />
-                                    </button>
                                 </div>
                             </div>
 
@@ -289,24 +362,36 @@ export default function Sessions() {
                                         ))}
                                     </div>
                                 ) : currentSessions.length > 0 ? (
-                                    <div className="divide-y divide-gray-100">
+                                    <div className="divide-y divide-slate-100">
                                         {currentSessions.map(session => {
                                             // Auto-select first session if none selected
                                             const isActive = activeSession?._id === session._id;
+                                            const phase = getSessionPhase(session);
                                             return (
                                                 <button
                                                     key={session._id}
                                                     onClick={() => setActiveSession(session)}
-                                                    className={`w-full text-left p-4 hover:bg-gray-50 transition-colors flex flex-col gap-1 ${isActive ? 'bg-blue-50/50 border-l-4 border-blue-600 pl-3' : 'pl-4 border-l-4 border-transparent'}`}
+                                                    className={`w-full text-left p-4 hover:bg-slate-50 transition-colors flex flex-col gap-2 ${isActive ? 'bg-blue-50/40 border-l-4 border-blue-600 pl-3' : 'pl-4 border-l-4 border-transparent'}`}
                                                 >
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <span className="font-semibold text-gray-900 line-clamp-1">{session.candidateName || "Candidate"}</span>
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor(session.status)}`}>{session.status}</span>
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <span className="font-semibold text-slate-900 line-clamp-1">{session.candidateName || "Candidate"}</span>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold capitalize ${getStatusColor(session.status)}`}>{session.status}</span>
                                                     </div>
-                                                    <div className="text-xs text-gray-500 line-clamp-1">{session.topics?.join(', ')}</div>
-                                                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                                                        <Clock className="w-3 h-3" />
-                                                        {new Date(session.startTime).toLocaleDateString()} • {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {(session.topics?.length ? session.topics.slice(0, 2) : ['General Interview']).map((topic, idx) => (
+                                                            <span key={`${session._id}-${topic}-${idx}`} className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                                                                {topic}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex items-center justify-between mt-1 text-xs">
+                                                        <div className="flex items-center gap-1.5 text-slate-500">
+                                                            <Clock className="w-3 h-3" />
+                                                            {new Date(session.startTime).toLocaleDateString()} • {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${phase.className}`}>
+                                                            {phase.label}
+                                                        </span>
                                                     </div>
                                                 </button>
                                             );
@@ -340,7 +425,7 @@ export default function Sessions() {
                         </div>
 
                         {/* --- RIGHT CONTENT (DETAILS) --- */}
-                        <div className={`${!activeSession ? 'hidden md:flex' : 'flex'} flex-1 overflow-y-auto bg-gray-50/30 p-4 md:p-6 flex-col`}>
+                        <div className={`${!activeSession ? 'hidden md:flex' : 'flex'} flex-1 overflow-y-auto bg-slate-50/40 p-4 md:p-6 flex-col`}>
                             {activeSession ? (
                                 <div className="max-w-3xl mx-auto w-full space-y-6">
                                     {/* Mobile Back Button */}
@@ -352,18 +437,31 @@ export default function Sessions() {
                                     </button>
 
                                     {/* Session Header Card */}
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                                         <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4">
                                             <div>
-                                                <h2 className="text-2xl font-bold text-gray-900 mb-2">{activeSession.topics?.join(', ')}</h2>
-                                                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                                                    <span className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded text-gray-700 font-medium">
+                                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                                    {(activeSession.topics?.length ? activeSession.topics : ['General Interview']).map((topic, idx) => (
+                                                        <span key={`${activeSession._id}-detail-topic-${topic}-${idx}`} className="text-[11px] px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100 font-semibold">
+                                                            {topic}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <h2 className="text-2xl font-bold text-slate-900 mb-2">{activeSession.candidateName} Interview Session</h2>
+                                                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                                                    <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-700 font-medium">
                                                         <Clock className="w-4 h-4" />
                                                         {new Date(activeSession.startTime).toDateString()}
                                                     </span>
-                                                    <span className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded text-gray-700 font-medium whitespace-nowrap">
+                                                    <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-slate-700 font-medium whitespace-nowrap">
                                                         <TimerIcon className="w-4 h-4" />
                                                         {new Date(activeSession.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(activeSession.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    <span className={`px-2 py-1 rounded text-xs border font-semibold ${getTimerDisplay(activeSession).color}`}>
+                                                        {getTimerDisplay(activeSession).text}
+                                                    </span>
+                                                    <span className="px-2 py-1 rounded text-xs border border-slate-200 bg-white text-slate-600 font-semibold">
+                                                        Session ID: {activeSession.sessionId}
                                                     </span>
                                                 </div>
                                             </div>
@@ -394,7 +492,7 @@ export default function Sessions() {
                                     </div>
 
                                     {/* Candidate Card */}
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                                         <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                                             <UserIcon size={20} className="text-blue-600" />
                                             Candidate Details
@@ -416,7 +514,7 @@ export default function Sessions() {
                                     </div>
 
                                     {/* Action Card: expert gives feedback (marks) for candidate — only show Write Review when not yet submitted */}
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <div>
                                             <h3 className="font-bold text-gray-900">Post-Session Review</h3>
                                             <p className="text-sm text-gray-500">Submit feedback and marks for the candidate after the session.</p>
@@ -562,7 +660,7 @@ export default function Sessions() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 opacity-100 scale-100">
                         <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setReviewSession(null)}></div>
                         <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 h-auto max-h-[90vh] overflow-y-auto">
-                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between sticky top-0 bg-white z-10">
+                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
                                 <h3 className="font-bold text-gray-900 text-lg">Submit Feedback</h3>
                                 <button onClick={() => setReviewSession(null)} className="text-gray-400 hover:text-gray-600">
                                     <X className="w-5 h-5" />

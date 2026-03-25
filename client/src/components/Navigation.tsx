@@ -16,7 +16,6 @@ import {
   ChevronDown,
   Bot,
   Sparkles,
-  Briefcase,
   Bookmark,
   Award
 } from "lucide-react";
@@ -139,7 +138,6 @@ const Navigation = () => {
   const navItems = [
     { name: "Mock Interview", href: "/", icon: <Users size={16} /> },
     { name: "My Sessions", href: "/my-sessions", icon: <Calendar size={16} /> },
-    { name: "Experts List", href: "/book-session", icon: <Briefcase size={16} /> },
   ];
 
   const moreItems = [
@@ -177,7 +175,7 @@ const Navigation = () => {
               onClick={closeAllDropdowns}
             >
               <MockeefyLogo className="h-9 w-9" variant="brand" />
-              <span className="text-[18px] font-logo tracking-tight text-slate-900">
+              <span className="text-[18px] font-logo tracking-tight text-elite-blue group-hover:text-blue-700 transition-colors">
                 Mockeefy
               </span>
             </Link>
@@ -221,9 +219,6 @@ const Navigation = () => {
                         : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
                     }`}
                   >
-                    <span className={`${isMoreOpen ? "text-elite-blue" : "text-slate-400 group-hover:text-slate-900"}`}>
-                      <ChevronDown size={16} />
-                    </span>
                     More
                     <ChevronDown size={14} className={`transition-transform duration-300 ${isMoreOpen ? "rotate-180" : ""}`} />
                   </button>

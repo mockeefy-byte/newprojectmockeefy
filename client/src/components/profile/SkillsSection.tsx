@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Plus, X, Code, Heart, Globe } from "lucide-react";
 import axios from '../../lib/axios';
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ interface SkillsSectionProps {
 
 export default function SkillsSection({ profileData, onUpdate }: SkillsSectionProps) {
     const { user } = useAuth();
+    const userId = user?.id || user?._id || user?.userId;
     const [skills, setSkills] = useState<{ technical: string[], soft: string[], languages: string[] }>({
         technical: profileData?.skills?.technical || [],
         soft: profileData?.skills?.soft || [],
@@ -24,6 +25,14 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
     });
     const [newSkill, setNewSkill] = useState({ technical: "", soft: "", languages: "" });
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setSkills({
+            technical: profileData?.skills?.technical || [],
+            soft: profileData?.skills?.soft || [],
+            languages: profileData?.skills?.languages || []
+        });
+    }, [profileData?.skills]);
 
     const addSkill = (type: "technical" | "soft" | "languages") => {
         if (newSkill[type].trim()) {
@@ -48,7 +57,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
             const response = await axios.put(
                 "/api/user/profile/skills",
                 skills,
-                { headers: { userid: user?.id } }
+                { headers: { userid: userId } }
             );
 
             if (response.data.success) {

@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { Save, DollarSign, Clock, MapPin, Briefcase } from "lucide-react";
 import axios from "../../lib/axios";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ interface PreferencesSectionProps {
 
 export default function PreferencesSection({ profileData, onUpdate }: PreferencesSectionProps) {
   const { user } = useAuth();
+  const userId = user?.id || user?._id || user?.userId;
   const [formData, setFormData] = useState({
     experienceLevel: profileData?.preferences?.experienceLevel || "",
     jobType: profileData?.preferences?.jobType || "",
@@ -27,6 +28,16 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
     willingToRelocate: profileData?.preferences?.willingToRelocate ?? false,
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      experienceLevel: profileData?.preferences?.experienceLevel || "",
+      jobType: profileData?.preferences?.jobType || "",
+      expectedSalary: profileData?.preferences?.expectedSalary || "",
+      noticePeriod: profileData?.preferences?.noticePeriod || "",
+      willingToRelocate: profileData?.preferences?.willingToRelocate ?? false,
+    });
+  }, [profileData?.preferences]);
 
   const isFresher = formData.experienceLevel === "Fresher";
 
@@ -57,7 +68,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
       const response = await axios.put(
         "/api/user/profile/preferences",
         payload,
-        { headers: { userid: user?.id } }
+        { headers: { userid: userId } }
       );
       if (response.data.success) {
         toast.success("Preferences updated successfully!");

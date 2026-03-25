@@ -32,6 +32,8 @@ interface PersonalInfoSectionProps {
 
 export default function PersonalInfoSection({ profileData, onUpdate }: PersonalInfoSectionProps) {
     const { user, fetchProfile } = useAuth();
+    const userId = user?.id || user?._id || user?.userId;
+    const [imageLoadError, setImageLoadError] = useState(false);
     const [formData, setFormData] = useState({
         name: profileData?.name || user?.name || "",
         email: profileData?.email || user?.email || "",
@@ -61,6 +63,10 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
             });
         }
     }, [profileData]);
+
+    useEffect(() => {
+        setImageLoadError(false);
+    }, [profileData?.profileImage, user?.profileImage]);
 
     const countries = useMemo(() => {
         return Country.getAllCountries();
@@ -106,7 +112,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
             const response = await axios.put(
                 "/api/user/profile/personal",
                 formData,
-                { headers: { userid: user?.id } }
+                { headers: { userid: userId } }
             );
 
             if (response.data.success) {
@@ -135,7 +141,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                 formData,
                 {
                     headers: {
-                        userid: user?.id,
+                        userid: userId,
                         "Content-Type": "multipart/form-data"
                     }
                 }
@@ -164,14 +170,25 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
             {/* Profile Image Upload */}
             <div className="border-b border-slate-100 pb-5">
                 <div className="flex items-center gap-5">
-                    <img
-                        src={getProfileImageUrl(profileData?.profileImage)}
-                        alt="Profile"
-                        className="w-16 h-16 rounded-xl object-cover border border-slate-200"
-                        onError={(e) => {
-                            e.currentTarget.src = getProfileImageUrl(null);
-                        }}
-                    />
+                    {(() => {
+                        const effectiveImage = profileData?.profileImage || user?.profileImage || null;
+                        const initial = (formData.name || user?.name || "U").trim().charAt(0).toUpperCase();
+                        if (!effectiveImage || imageLoadError) {
+                            return (
+                                <div className="w-16 h-16 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 flex items-center justify-center text-xl font-bold">
+                                    {initial}
+                                </div>
+                            );
+                        }
+                        return (
+                            <img
+                                src={getProfileImageUrl(effectiveImage)}
+                                alt="Profile"
+                                className="w-16 h-16 rounded-xl object-cover border border-slate-200"
+                                onError={() => setImageLoadError(true)}
+                            />
+                        );
+                    })()}
                     <div>
                         <label className="cursor-pointer inline-block">
                             <input

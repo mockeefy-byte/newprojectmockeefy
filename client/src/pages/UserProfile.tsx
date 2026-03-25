@@ -7,6 +7,7 @@ import {
   Settings2,
   FileText,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "../lib/axios";
 import { useAuth } from "../context/AuthContext";
@@ -18,23 +19,23 @@ import SkillsSection from "../components/profile/SkillsSection";
 import PreferencesSection from "../components/profile/PreferencesSection";
 import ResumePreview from "../components/profile/ResumePreview";
 import { useQuery } from "@tanstack/react-query";
-import { getProfileImageUrl } from "../lib/imageUtils";
 
 export default function UserProfile() {
   const { user } = useAuth();
+  const userId = user?.id || user?._id || user?.userId;
   const [activeTab, setActiveTab] = useState("personal");
   const [isResumeOpen, setIsResumeOpen] = useState(false);
 
   const { data: profileData, isLoading, refetch } = useQuery({
-    queryKey: ["userProfile", user?.id],
+    queryKey: ["userProfile", userId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!userId) return null;
       const response = await axios.get("/api/user/profile", {
-        headers: { userid: user.id },
+        headers: { userid: userId },
       });
       return response.data.success ? response.data.data : null;
     },
-    enabled: !!user?.id,
+    enabled: !!userId,
   });
 
   const tabs = [
@@ -47,6 +48,8 @@ export default function UserProfile() {
   ];
 
   const completion = profileData?.profileCompletion ?? 0;
+  const warnings: string[] = profileData?.profileWarnings || [];
+  const completionLabel = isLoading ? "..." : `${completion}%`;
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (completion / 100) * circumference;
@@ -95,28 +98,44 @@ export default function UserProfile() {
                   />
                 </svg>
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-elite-black">
-                  {completion}%
+                  {completionLabel}
                 </span>
               </div>
               <div>
-                <p className="text-[9px] font-black text-slate-400 tracking-tight uppercase">
+                <p className="text-[11px] font-black text-slate-400 tracking-tight uppercase">
                   Completion
                 </p>
                 <p className="text-lg font-black text-elite-black tracking-tight mt-0.5">
-                  {completion}% Ready
+                  {isLoading ? "Loading..." : `${completion}% Ready`}
                 </p>
               </div>
             </div>
             <div className="p-5 hover:bg-blue-50/30 transition-colors flex flex-col justify-center">
-              <p className="text-[9px] font-black text-slate-400 tracking-tight uppercase">
+              <p className="text-[11px] font-black text-slate-400 tracking-tight uppercase">
                 Status
               </p>
-              <p className="text-[11px] font-bold text-slate-700 mt-0.5">
-                {completion >= 80 ? "Strong profile" : completion >= 50 ? "In progress" : "Get started"}
+              <p className="text-sm font-bold text-slate-700 mt-0.5">
+                {isLoading ? "Loading profile" : completion >= 80 ? "Strong profile" : completion >= 50 ? "In progress" : "Get started"}
               </p>
             </div>
           </div>
         </div>
+
+        {warnings.length > 0 && !isLoading && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-amber-700" />
+              <h3 className="text-sm font-bold text-amber-800">Missing details (complete these to increase profile %)</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {warnings.map((warning, index) => (
+                <p key={index} className="text-xs text-amber-700">
+                  • {warning}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Main content card — same as Sessions "My Simulations" card */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -125,7 +144,7 @@ export default function UserProfile() {
               <Settings2 className="w-4 h-4 text-elite-blue" />
               <h2 className="font-elite leading-none">Profile Settings</h2>
             </div>
-            <p className="text-[10px] text-slate-500 font-medium">
+            <p className="text-xs text-slate-500 font-medium">
               Manage your identity and preferences
             </p>
           </div>
@@ -142,7 +161,7 @@ export default function UserProfile() {
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`
-                        shrink-0 lg:shrink flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all
+                        shrink-0 lg:shrink flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[11px] font-black tracking-tight transition-all
                         ${isActive ? "bg-elite-blue text-white shadow-lg shadow-blue-500/20" : "text-slate-500 hover:bg-slate-100 hover:text-elite-blue"}
                       `}
                     >
@@ -156,23 +175,31 @@ export default function UserProfile() {
 
             {/* Content area — same padding as Sessions table/content */}
             <div className="lg:col-span-9 p-5 lg:p-6 min-h-[400px]">
-              {activeTab === "personal" && (
-                <PersonalInfoSection profileData={profileData} onUpdate={refetch} />
-              )}
-              {activeTab === "education" && (
-                <EducationSection profileData={profileData} onUpdate={refetch} />
-              )}
-              {activeTab === "experience" && (
-                <ExperienceSection profileData={profileData} onUpdate={refetch} />
-              )}
-              {activeTab === "certifications" && (
-                <CertificationsSection profileData={profileData} onUpdate={refetch} />
-              )}
-              {activeTab === "skills" && (
-                <SkillsSection profileData={profileData} onUpdate={refetch} />
-              )}
-              {activeTab === "preferences" && (
-                <PreferencesSection profileData={profileData} onUpdate={refetch} />
+              {isLoading ? (
+                <div className="h-full min-h-[280px] flex items-center justify-center text-slate-500 text-sm font-medium">
+                  Loading profile data...
+                </div>
+              ) : (
+                <>
+                  {activeTab === "personal" && (
+                    <PersonalInfoSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                  {activeTab === "education" && (
+                    <EducationSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                  {activeTab === "experience" && (
+                    <ExperienceSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                  {activeTab === "certifications" && (
+                    <CertificationsSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                  {activeTab === "skills" && (
+                    <SkillsSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                  {activeTab === "preferences" && (
+                    <PreferencesSection profileData={profileData} onUpdate={refetch} />
+                  )}
+                </>
               )}
             </div>
           </div>

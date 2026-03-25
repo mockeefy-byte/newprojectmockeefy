@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ChevronDown, Check } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout from "./auth/AuthLayout";
 import MockeefyLogo from "./MockeefyLogo";
@@ -24,6 +24,7 @@ const btnPrimary =
   "w-full h-11 rounded-xl bg-[#004fcb] text-white font-bold text-sm hover:bg-blue-700 focus:ring-2 focus:ring-[#004fcb]/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20";
 
 export default function CompleteProfile() {
+  const roleMenuRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     password: "",
@@ -32,6 +33,7 @@ export default function CompleteProfile() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -50,6 +52,16 @@ export default function CompleteProfile() {
       setFormData((prev) => ({ ...prev, name: state.name }));
     }
   }, [state, navigate]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(event.target as Node)) {
+        setIsRoleOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -134,21 +146,49 @@ export default function CompleteProfile() {
             <label htmlFor="userType" className={labelClass}>
               I am a
             </label>
-            <select
-              id="userType"
-              value={formData.userType}
-              onChange={(e) => handleInputChange("userType", e.target.value)}
-              className={inputClass}
-              required
-              aria-label="Select your role"
-            >
-              <option value="">Select one — Candidate or Expert</option>
-              {userTypeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={roleMenuRef}>
+              <button
+                id="userType"
+                type="button"
+                onClick={() => setIsRoleOpen((v) => !v)}
+                className="w-full h-11 px-4 rounded-xl border-2 border-slate-200 bg-white text-slate-900 hover:border-blue-300 focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 outline-none transition-all text-sm flex items-center justify-between"
+                aria-haspopup="listbox"
+                aria-expanded={isRoleOpen}
+              >
+                <span className={`${formData.userType ? "text-slate-900 font-semibold" : "text-slate-400 font-medium"}`}>
+                  {formData.userType
+                    ? userTypeOptions.find((opt) => opt.value === formData.userType)?.label
+                    : "Select one — Candidate or Expert"}
+                </span>
+                <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${isRoleOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isRoleOpen && (
+                <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl p-1.5">
+                  {userTypeOptions.map((opt) => {
+                    const selected = formData.userType === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          handleInputChange("userType", opt.value);
+                          setIsRoleOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-between ${
+                          selected ? "bg-blue-50 text-[#004fcb]" : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                        role="option"
+                        aria-selected={selected}
+                      >
+                        <span>{opt.label}</span>
+                        {selected ? <Check className="h-4 w-4" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

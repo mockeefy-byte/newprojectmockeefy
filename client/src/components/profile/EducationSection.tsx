@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, GraduationCap } from "lucide-react";
 import axios from '../../lib/axios';
 import { toast } from "sonner";
@@ -22,8 +22,13 @@ interface EducationSectionProps {
 
 export default function EducationSection({ profileData, onUpdate }: EducationSectionProps) {
     const { user } = useAuth();
+    const userId = user?.id || user?._id || user?.userId;
     const [education, setEducation] = useState(profileData?.education || []);
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setEducation(profileData?.education || []);
+    }, [profileData?.education]);
 
     const addEducation = () => {
         setEducation([...education, {
@@ -52,7 +57,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
             const response = await axios.put(
                 "/api/user/profile/education",
                 { education },
-                { headers: { userid: user?.id } }
+                { headers: { userid: userId } }
             );
 
             if (response.data.success) {

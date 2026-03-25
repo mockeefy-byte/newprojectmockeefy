@@ -47,7 +47,7 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
         <div className="h-[80px] flex items-center px-6 border-b border-blue-50/50 overflow-hidden">
           <div className="relative flex items-center w-full h-full gap-3">
             <MockeefyLogo className="h-9 w-9" variant="brand" />
-            <span className="text-xl font-logo tracking-tight text-gray-900">Mockeefy</span>
+            <span className="text-xl font-logo tracking-tight text-elite-blue">Mockeefy</span>
           </div>
         </div>
 
@@ -122,7 +122,7 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 h-[80px]">
             <div className="flex items-center gap-3">
               <MockeefyLogo className="h-9 w-9" variant="brand" />
-              <span className="text-xl font-logo tracking-tight text-gray-900">Mockeefy</span>
+              <span className="text-xl font-logo tracking-tight text-elite-blue">Mockeefy</span>
             </div>
             <button type="button" onClick={onClose} className="p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-md">
               <span className="sr-only">Close menu</span>

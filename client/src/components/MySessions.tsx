@@ -66,6 +66,90 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function SessionAvatar({
+  name,
+  profileImage,
+  className
+}: {
+  name: string;
+  profileImage?: string | null;
+  className?: string;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const initial = (name || "E").trim().charAt(0).toUpperCase();
+  const shouldShowLetter = !profileImage || imageError;
+
+  if (shouldShowLetter) {
+    return (
+      <div className={`w-full h-full rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold ${className || ""}`}>
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={getProfileImageUrl(profileImage)}
+      alt={name}
+      className={`w-full h-full object-cover rounded-lg ${className || ""}`}
+      onError={() => setImageError(true)}
+    />
+  );
+}
+
+function MySessionsSkeletonDesktop() {
+  return (
+    <tbody className="divide-y divide-slate-50">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <tr key={`desktop-skeleton-${index}`} className="animate-pulse">
+          <td className="px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/60 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="h-3 w-48 bg-slate-100 rounded mb-2" />
+                <div className="h-2.5 w-28 bg-slate-100 rounded" />
+              </div>
+            </div>
+          </td>
+          <td className="px-6 py-5 hidden sm:table-cell">
+            <div className="h-3 w-24 bg-slate-100 rounded mb-2" />
+            <div className="h-2.5 w-16 bg-slate-100 rounded" />
+          </td>
+          <td className="px-6 py-5">
+            <div className="h-6 w-20 bg-slate-100 rounded-lg" />
+          </td>
+          <td className="px-6 py-5 text-right">
+            <div className="h-8 w-24 bg-slate-100 rounded-lg ml-auto" />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
+}
+
+function MySessionsSkeletonMobile() {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={`mobile-skeleton-${index}`} className="p-4 animate-pulse">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/60 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="h-3 w-40 bg-slate-100 rounded mb-2" />
+              <div className="h-2.5 w-28 bg-slate-100 rounded mb-2" />
+              <div className="h-2.5 w-32 bg-slate-100 rounded" />
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="h-6 w-20 bg-slate-100 rounded-lg" />
+                <div className="h-7 w-24 bg-slate-100 rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 /** Session is joinable from startTime until endTime (e.g. 2:00–2:30 → joinable until 2:30). */
 function canJoinSession(session: Session): boolean {
   if (['Completed', 'Cancelled'].includes(session.status)) return false;
@@ -304,14 +388,11 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {loading ? (
-                      [1, 2, 3].map(i => (
-                        <tr key={i} className="animate-pulse">
-                          <td colSpan={4} className="px-6 py-5"><div className="h-10 bg-slate-50 rounded-xl" /></td>
-                        </tr>
-                      ))
-                    ) : pagedSessions.length > 0 ? (
+                  {loading ? (
+                    <MySessionsSkeletonDesktop />
+                  ) : (
+                    <tbody className="divide-y divide-slate-50">
+                      {pagedSessions.length > 0 ? (
                       pagedSessions.map(session => {
                         const displayStatus = getDisplayStatus(session);
                         const { timeLabel, countdown, joinable } = getSessionTimeAndCountdown(session, now);
@@ -320,7 +401,7 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
                             <td className="px-6 py-5">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 p-0.5 shadow-sm shrink-0">
-                                  <img src={getProfileImageUrl(session.profileImage)} alt="" className="w-full h-full object-cover rounded-lg" />
+                                  <SessionAvatar name={session.expert} profileImage={session.profileImage} />
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-bold text-slate-900 text-sm truncate">Your session with {session.expert}</p>
@@ -387,19 +468,20 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
                           </tr>
                         );
                       })
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-16 text-center">
-                          <Briefcase className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                          <p className="text-slate-600 font-semibold text-sm">No bookings yet</p>
-                          <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">Your bookings will show here after you book a session.</p>
-                          <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
-                            Book a session
-                          </button>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-16 text-center">
+                            <Briefcase className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                            <p className="text-slate-600 font-semibold text-sm">No bookings yet</p>
+                            <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">Your bookings will show here after you book a session.</p>
+                            <button type="button" onClick={() => navigate("/book-session")} className="mt-4 px-4 py-2 bg-elite-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors">
+                              Book a session
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  )}
                 </table>
               </div>
 
@@ -437,9 +519,7 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
               {/* Mobile: card layout */}
               <div className="md:hidden divide-y divide-slate-100">
                 {loading ? (
-                  [1, 2, 3].map(i => (
-                    <div key={i} className="p-4 animate-pulse"><div className="h-24 bg-slate-50 rounded-xl" /></div>
-                  ))
+                  <MySessionsSkeletonMobile />
                 ) : pagedSessions.length > 0 ? (
                   pagedSessions.map(session => {
                     const displayStatus = getDisplayStatus(session);
@@ -448,7 +528,7 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
                       <div key={session.id} className="p-4 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-start gap-3">
                           <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 shrink-0">
-                            <img src={getProfileImageUrl(session.profileImage)} alt="" className="w-full h-full object-cover" />
+                            <SessionAvatar name={session.expert} profileImage={session.profileImage} className="rounded-xl" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-slate-900 text-sm">Your session with {session.expert}</p>
@@ -561,71 +641,83 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
 
         {/* SAVED EXPERTS VIEW */}
         {activeView === 'saved' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5 mb-6">
-              <Bookmark className="w-5 h-5 text-elite-blue" />
-              <h2 className="font-elite leading-none text-xl">Saved Experts Library</h2>
-            </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-2.5">
+                  <Bookmark className="w-5 h-5 text-elite-blue mt-0.5" />
+                  <div className="space-y-0.5">
+                    <h2 className="font-elite leading-none text-slate-900">Saved Experts Library</h2>
+                    <p className="text-[10px] text-slate-500 font-medium mt-1">
+                      Track your shortlisted mentors and book quickly when ready.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-[11px] font-bold text-blue-700">
+                  {savedExperts.length} Saved
+                </span>
+              </div>
 
-            <div className="w-full">
-              {savedExperts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                  {savedExperts.map((expert) => (
-                    <div key={expert.expertID} className="relative">
-                      <div className="bg-white rounded-2xl border border-slate-200/60 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex justify-between items-start">
-                          <div className="flex gap-3">
-                            <img src={expert.avatar} className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-100" />
-                            <div>
-                              <h3 className="font-bold text-[15px] text-elite-black leading-tight">{expert.name}</h3>
-                              <p className="text-[12px] text-slate-500 mt-0.5">{expert.role}</p>
-                              <p className="text-[10px] text-slate-400">{expert.company}</p>
+              <div className="p-6 md:p-7 bg-slate-50/30">
+                {savedExperts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                    {savedExperts.map((expert) => (
+                      <div key={expert.expertID} className="relative">
+                        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all">
+                          <div className="flex justify-between items-start">
+                            <div className="flex gap-3">
+                              <img src={expert.avatar} className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-100" />
+                              <div>
+                                <h3 className="font-bold text-[15px] text-elite-black leading-tight">{expert.name}</h3>
+                                <p className="text-[12px] text-slate-500 mt-0.5">{expert.role}</p>
+                                <p className="text-[10px] text-slate-400">{expert.company}</p>
+                              </div>
                             </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updated = savedExperts.filter(e => e.expertID !== expert.expertID);
+                                setSavedExperts(updated);
+                                localStorage.setItem("savedExperts", JSON.stringify(updated));
+                                window.dispatchEvent(new Event("storage"));
+                              }}
+                              className="p-1.5 bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Remove from saved"
+                            >
+                              <Check size={16} strokeWidth={3} />
+                            </button>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updated = savedExperts.filter(e => e.expertID !== expert.expertID);
-                              setSavedExperts(updated);
-                              localStorage.setItem("savedExperts", JSON.stringify(updated));
-                              window.dispatchEvent(new Event("storage"));
-                            }}
-                            className="p-1.5 bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Remove from saved"
-                          >
-                            <Check size={16} strokeWidth={3} />
-                          </button>
-                        </div>
 
-                        <div className="flex items-center gap-3 text-[11px] text-slate-500 bg-slate-50/50 p-2 rounded-lg">
-                          <div className="flex items-center gap-1"><Star size={12} className="text-amber-500 fill-current" /> <span className="font-bold text-slate-700">{expert.rating.toFixed(1)}</span></div>
-                          <div className="w-px h-3 bg-slate-200"></div>
-                          <div>{expert.experience} Exp</div>
-                          <div className="w-px h-3 bg-slate-200"></div>
-                          <div>{expert.totalSessions}+ Sessions</div>
-                        </div>
-
-                        <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-50">
-                          <div>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Session Fee</p>
-                            <span className="font-black text-[16px] text-elite-black">{expert.price || "₹499"}</span>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-500 bg-slate-50/50 p-2 rounded-lg">
+                            <div className="flex items-center gap-1"><Star size={12} className="text-amber-500 fill-current" /> <span className="font-bold text-slate-700">{expert.rating.toFixed(1)}</span></div>
+                            <div className="w-px h-3 bg-slate-200"></div>
+                            <div>{expert.experience} Exp</div>
+                            <div className="w-px h-3 bg-slate-200"></div>
+                            <div>{expert.totalSessions}+ Sessions</div>
                           </div>
-                          <button onClick={() => navigate('/book-session', { state: { expertId: expert.expertID, profile: expert } })} className="px-4 py-2 bg-elite-blue text-white rounded-lg text-[10px] font-black hover:bg-blue-600 transition-all">Book Now</button>
+
+                          <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-50">
+                            <div>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Session Fee</p>
+                              <span className="font-black text-[16px] text-elite-black">{expert.price || "₹499"}</span>
+                            </div>
+                            <button onClick={() => navigate('/book-session', { state: { expertId: expert.expertID, profile: expert } })} className="px-4 py-2 bg-elite-blue text-white rounded-lg text-[10px] font-black hover:bg-blue-600 transition-all">Book Now</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-slate-200/60 p-20 text-center flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
-                    <Bookmark className="w-8 h-8 text-slate-300" />
+                    ))}
                   </div>
-                  <h3 className="text-slate-900 font-bold mb-1">No Saved Experts</h3>
-                  <p className="text-slate-500 text-sm max-w-xs mx-auto">Start saving mentors from the discovery feed to build your personal shortlist.</p>
-                  <button onClick={() => navigate('/')} className="mt-6 px-6 py-2 bg-elite-blue text-white rounded-xl text-[11px] font-black">Browse Mentors</button>
-                </div>
-              )}
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200/60 p-20 text-center flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
+                      <Bookmark className="w-8 h-8 text-slate-300" />
+                    </div>
+                    <h3 className="text-slate-900 font-bold mb-1">No Saved Experts</h3>
+                    <p className="text-slate-500 text-sm max-w-xs mx-auto">Start saving mentors from the discovery feed to build your personal shortlist.</p>
+                    <button onClick={() => navigate('/')} className="mt-6 px-6 py-2 bg-elite-blue text-white rounded-xl text-[11px] font-black">Browse Mentors</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Briefcase,
   MapPin,
   Building2,
+  ChevronDown,
   ChevronRight,
   Lightbulb,
   ListOrdered,
   Target,
   Sparkles,
+  Check,
   CheckCircle2,
   XCircle,
   Code2,
@@ -33,6 +35,64 @@ type TipsData = {
 };
 
 const CATEGORY_OPTIONS = ["IT", "HR", "Business", "Design"];
+
+function CategorySelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return (
+    <div className="relative z-20" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 flex items-center justify-between hover:border-blue-300 hover:bg-blue-50/30 transition-all"
+      >
+        <span>{value}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-40 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl p-1.5">
+          {CATEGORY_OPTIONS.map((option) => {
+            const isActive = option === value;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`w-full px-3 py-2 rounded-lg text-left text-sm font-semibold flex items-center justify-between ${
+                  isActive ? "bg-blue-50 text-elite-blue" : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <span>{option}</span>
+                {isActive ? <Check className="w-4 h-4" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TipsPage() {
   const [company, setCompany] = useState("");
@@ -67,7 +127,7 @@ export default function TipsPage() {
   return (
       <div className="space-y-8 animate-in fade-in duration-500 pb-10 max-w-4xl mx-auto">
         {/* Header - same style as My Simulations / other pages */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] overflow-visible">
           <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2.5">
@@ -81,11 +141,11 @@ export default function TipsPage() {
           </div>
 
           {/* Filter form - inside same card */}
-          <div className="p-5 md:p-6 border-b border-slate-100 bg-slate-50/30">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-4">
+          <div className="p-6 md:p-7 border-b border-slate-100 bg-slate-50/30">
+            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-5">
               Filter by context
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                   Company name
@@ -135,23 +195,13 @@ export default function TipsPage() {
                 <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                   Category
                 </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-10 pl-3 pr-9 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-elite-blue/20 focus:border-elite-blue"
-                >
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <CategorySelect value={category} onChange={setCategory} />
               </div>
             </div>
             <button
               onClick={handleGetTips}
               disabled={loading}
-              className="mt-4 px-5 py-2.5 bg-elite-blue hover:bg-blue-600 disabled:opacity-70 text-white rounded-xl text-[11px] font-black tracking-tight flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
+              className="mt-5 px-5 py-2.5 bg-elite-blue hover:bg-blue-600 disabled:opacity-70 text-white rounded-xl text-[11px] font-black tracking-tight flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
             >
               {loading ? (
                 <>

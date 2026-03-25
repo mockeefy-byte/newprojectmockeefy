@@ -1,28 +1,28 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import axios from '../lib/axios';
 import { useAuth } from "../context/AuthContext";
 import {
   Star, MapPin, Clock, Users, Award,
-  Calendar, CheckCircle, CreditCard, Shield, Video,
-  ChevronLeft, ChevronRight, X, ThumbsUp, Zap, MessageCircle, Briefcase,
+  Calendar, CheckCircle, Shield, Video,
+  ChevronLeft, ChevronRight, ChevronDown, X, ThumbsUp, Zap, MessageCircle, Briefcase,
   Share2, Check, Info, ArrowRight, Timer, UserCircle2, BadgeCheck, Code2, Terminal
 } from "lucide-react";
 import Swal from "sweetalert2";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
-import ExpertsListForBooking from "./ExpertsListForBooking";
 import { mapExpertToProfile, Profile } from "../lib/bookSessionUtils";
-import DashboardLayout from "./DashboardLayout";
 
 /**
  * Enhanced Skeleton Loader matching the LinkedIn-style design
  */
 const BookSessionSkeleton = () => (
-  <DashboardLayout>
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
-      {/* Main Content Skeleton */}
-      <div className="lg:col-span-8 space-y-6">
+  <div className="min-h-screen bg-white pb-10">
+    <Navigation />
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-7">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
+        {/* Main Content Skeleton */}
+        <div className="lg:col-span-8 space-y-6">
         {/* Profile Header Skeleton */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="h-48 bg-gray-200"></div>
@@ -56,36 +56,111 @@ const BookSessionSkeleton = () => (
         </div>
       </div>
 
-      {/* Right column placeholder so layout feels consistent */}
-      <div className="hidden lg:block lg:col-span-4 space-y-6">
-        <div className="bg-white rounded-xl p-6 border border-gray-200">
-          <div className="h-6 bg-gray-200 w-2/3 rounded mb-6"></div>
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-14 bg-gray-100 rounded-lg"></div>
-            ))}
+        {/* Right column placeholder so layout feels consistent */}
+        <div className="hidden lg:block lg:col-span-4 space-y-6">
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="h-6 bg-gray-200 w-2/3 rounded mb-6"></div>
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-14 bg-gray-100 rounded-lg"></div>
+              ))}
+            </div>
+            <div className="mt-8 h-12 bg-gray-200 w-full rounded-xl"></div>
           </div>
-          <div className="mt-8 h-12 bg-gray-200 w-full rounded-xl"></div>
         </div>
       </div>
     </div>
-  </DashboardLayout>
+    <Footer />
+  </div>
 );
+
+type PremiumSelectOption = {
+  value: string;
+  label: string;
+};
+
+function PremiumSelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: PremiumSelectOption[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-left shadow-sm hover:border-blue-300 hover:bg-blue-50/30 transition-all"
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800 truncate">{selected?.label || "Select option"}</p>
+        </div>
+        <ChevronDown size={16} className={`text-slate-500 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-xl p-1.5 max-h-60 overflow-y-auto">
+          {options.map((option) => {
+            const isActive = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
+                  isActive ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{option.label}</p>
+                </div>
+                {isActive ? <Check className="w-4 h-4 shrink-0" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const BookSessionPage = () => {
   type SessionDuration = 30 | 60;
   const isSessionDuration = (d: unknown): d is SessionDuration => d === 30 || d === 60;
 
-  const [showPayment, setShowPayment] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
   const [appliedFreePromo, setAppliedFreePromo] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { profile: existingProfile, expertId: stateExpertId, price: overridePrice } = location.state || {};
+  const queryExpertId = searchParams.get("expertId");
 
-  const expertId = stateExpertId || existingProfile?.id;
+  const expertId = stateExpertId || existingProfile?.id || queryExpertId;
   const [profile, setProfile] = useState<Profile | null>(existingProfile || null);
+  const hasInitialProfile = Boolean(existingProfile);
 
   const sessionPrice = overridePrice ? overridePrice : (profile?.price || 0);
   // Skill (for pricing): expert's skills only; duration 30 or 60; level from expert
@@ -102,20 +177,62 @@ const BookSessionPage = () => {
   }, [profile?.availability?.allowedDurations, profile?.availability?.sessionDuration]);
   const [sessionDuration, setSessionDuration] = useState<SessionDuration>(durationOptions[0] ?? 30);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
+  const skillSelectOptions = useMemo<PremiumSelectOption[]>(
+    () => skillOptions.map((skill) => ({ value: skill, label: skill })),
+    [skillOptions]
+  );
+  const durationSelectOptions = useMemo<PremiumSelectOption[]>(
+    () =>
+      durationOptions.map((duration) => ({
+        value: String(duration),
+        label: `${duration} Minutes`,
+      })),
+    [durationOptions]
+  );
 
-  // LinkedIn-style Profile Header
+  // Professional category-aware banner images
   const bannerImage = useMemo(() => {
-    const banners = [
-      "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1508615039623-a25605d2b022?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1200&q=80"
-    ];
-    // Use expertId to consistently pick a banner for the same expert
+    const category = (profile?.category || "General").toLowerCase();
+    const categoryBanners: Record<string, string[]> = {
+      it: [
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1400&q=80",
+      ],
+      hr: [
+        "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1400&q=80",
+      ],
+      business: [
+        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1400&q=80",
+      ],
+      design: [
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1400&q=80",
+      ],
+      marketing: [
+        "https://images.unsplash.com/photo-1533750349088-cd871a92f312?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?auto=format&fit=crop&w=1400&q=80",
+      ],
+      finance: [
+        "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1565514020179-026b92b84bb6?auto=format&fit=crop&w=1400&q=80",
+      ],
+      ai: [
+        "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1674027444485-cec3da58eef4?auto=format&fit=crop&w=1400&q=80",
+      ],
+      general: [
+        "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1400&q=80",
+        "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=80",
+      ],
+    };
+
+    const banners = categoryBanners[category] || categoryBanners.general;
+    // Use expertId to consistently pick one banner for the same expert
     const charSum = expertId ? expertId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : 0;
     return banners[charSum % banners.length];
-  }, [expertId]);
+  }, [expertId, profile?.category]);
 
   useEffect(() => {
     if (profile?.level) setExpertLevel(profile.level);
@@ -125,7 +242,7 @@ const BookSessionPage = () => {
     const validDur = dur.filter(isSessionDuration);
     if (validDur.length && !validDur.includes(sessionDuration)) setSessionDuration(validDur[0]);
   }, [profile]);
-  const [loading, setLoading] = useState(!existingProfile || !existingProfile.availability);
+  const [loading, setLoading] = useState(!existingProfile);
   const [errorValue, setErrorValue] = useState<string | null>(null);
 
   useEffect(() => {
@@ -133,7 +250,8 @@ const BookSessionPage = () => {
     if (expertId) {
       const fetchProfile = async () => {
         try {
-          setLoading(true);
+          // Avoid UI flicker: only show full-page skeleton when we don't already have a profile to render.
+          if (!hasInitialProfile) setLoading(true);
           const response = await axios.get("/api/expert/verified");
           if (response.data?.success && response.data?.data) {
             const foundExpert = response.data.data.find((e: any) =>
@@ -152,12 +270,12 @@ const BookSessionPage = () => {
           console.error(err);
           setErrorValue("Error connecting to server");
         } finally {
-          setLoading(false);
+          if (!hasInitialProfile) setLoading(false);
         }
       };
       fetchProfile();
     }
-  }, [expertId]);
+  }, [expertId, hasInitialProfile]);
 
   // Price is category-based only (expert's category + level + duration). No skill.
   useEffect(() => {
@@ -193,6 +311,9 @@ const BookSessionPage = () => {
   const [bookedSessions, setBookedSessions] = useState<any[]>([]);
   const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [expertAvatarError, setExpertAvatarError] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // Scroll active date into view on mount or when navigation drawer opens
@@ -205,6 +326,16 @@ const BookSessionPage = () => {
     }
   }, [selectedDate, showMobileBooking]);
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setIsShareMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   const scrollCarousel = (direction: 'left' | 'right') => {
     if (carouselRef.current) {
       const { scrollLeft, clientWidth } = carouselRef.current;
@@ -214,6 +345,57 @@ const BookSessionPage = () => {
         behavior: 'smooth'
       });
     }
+  };
+
+  const getShareUrl = () => {
+    const id = expertId || profile?.id || "";
+    if (typeof window === "undefined") return `/book-session?expertId=${encodeURIComponent(id)}`;
+    return `${window.location.origin}/book-session?expertId=${encodeURIComponent(id)}`;
+  };
+
+  const handleShare = (platform: "whatsapp" | "linkedin" | "x" | "facebook" | "telegram" | "email" | "copy" | "native") => {
+    const shareUrl = getShareUrl();
+    const text = `Book a mock interview with ${profile?.name || "expert"} on Mockeefy`;
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(shareUrl);
+
+    const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
+
+    if (platform === "native") {
+      if (navigator.share) {
+        navigator.share({ title: "Mockeefy Expert Booking", text, url: shareUrl }).catch(() => {});
+      } else {
+        handleShare("copy");
+      }
+      return;
+    }
+
+    switch (platform) {
+      case "whatsapp":
+        open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`);
+        break;
+      case "linkedin":
+        open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`);
+        break;
+      case "x":
+        open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`);
+        break;
+      case "facebook":
+        open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
+        break;
+      case "telegram":
+        open(`https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`);
+        break;
+      case "email":
+        window.location.href = `mailto:?subject=${encodeURIComponent("Mock Interview Booking")}&body=${encodedText}%0A${encodedUrl}`;
+        break;
+      case "copy":
+      default:
+        navigator.clipboard.writeText(shareUrl);
+        Swal.fire({ title: "Copied", text: "Booking link copied to clipboard.", icon: "success", timer: 1800, showConfirmButton: false });
+        break;
+    }
+    setIsShareMenuOpen(false);
   };
 
   // Reviews
@@ -499,11 +681,7 @@ const BookSessionPage = () => {
   };
 
   if (!expertId) {
-    return (
-      <DashboardLayout>
-        <ExpertsListForBooking />
-      </DashboardLayout>
-    );
+    return <Navigate to="/" replace />;
   }
 
   if (loading) return <BookSessionSkeleton />;
@@ -517,7 +695,7 @@ const BookSessionPage = () => {
             onClick={() => navigate("/book-session")}
             className="px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-[#003bb5] transition-colors font-medium"
           >
-            Back to Experts List
+            Back to Home
           </button>
         </div>
       </div>
@@ -556,19 +734,41 @@ const BookSessionPage = () => {
 
 
   const ProfileHeader = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)]">
       {/* Banner */}
       <div className="h-36 md:h-44 relative overflow-hidden">
         <img
           src={bannerImage}
           alt="Banner"
-          className="w-full h-full object-cover opacity-80"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button className="white-glass p-2.5 rounded-full hover:bg-white/40 transition-colors shadow-sm bg-white/20 backdrop-blur-md">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/25 to-black/5" />
+        <div className="absolute right-4 bottom-4">
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold bg-white/90 text-slate-800 border border-white/70">
+            {profile.category} Interview Mentor
+          </span>
+        </div>
+        <div className="absolute top-4 right-4 flex gap-2" ref={shareMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsShareMenuOpen((v) => !v)}
+            className="white-glass p-2.5 rounded-full hover:bg-white/40 transition-colors shadow-sm bg-white/20 backdrop-blur-md"
+            title="Share"
+          >
             <Share2 className="w-5 h-5 text-gray-700" />
           </button>
+          {isShareMenuOpen && (
+            <div className="absolute right-0 top-12 w-52 bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-20">
+              <button onClick={() => handleShare("native")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">Share...</button>
+              <button onClick={() => handleShare("whatsapp")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">WhatsApp</button>
+              <button onClick={() => handleShare("linkedin")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">LinkedIn</button>
+              <button onClick={() => handleShare("x")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">X (Twitter)</button>
+              <button onClick={() => handleShare("facebook")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">Facebook</button>
+              <button onClick={() => handleShare("telegram")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">Telegram</button>
+              <button onClick={() => handleShare("email")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">Email</button>
+              <button onClick={() => handleShare("copy")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium">Copy link</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -578,21 +778,18 @@ const BookSessionPage = () => {
           {/* Avatar */}
           <div className="relative shrink-0 -mt-14 md:-mt-16">
             <div className="relative inline-block">
-              <img
-                src={profile.avatar || "/mockeefy.png"}
-                alt={profile.name}
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-white object-cover shadow-lg shadow-black/5"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/mockeefy.png";
-                }}
-              />
-              <div
-                className="absolute bottom-1 right-1 flex items-center justify-center rounded-full"
-                title="Online"
-              >
-                <div className="bg-green-500 border-2 border-white w-2.5 h-2.5 rounded-full shrink-0" />
-              </div>
+              {profile.avatar && !/\/mockeefy\.png$/i.test(profile.avatar) && !expertAvatarError ? (
+                <img
+                  src={profile.avatar}
+                  alt={profile.name}
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-white object-cover shadow-lg shadow-black/5"
+                  onError={() => setExpertAvatarError(true)}
+                />
+              ) : (
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-slate-100 text-slate-700 flex items-center justify-center text-2xl font-bold shadow-lg shadow-black/5">
+                  {(profile.name || "E").trim().charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
 
@@ -648,7 +845,7 @@ const BookSessionPage = () => {
 
   // Booking card — used in sidebar (desktop) and mobile sheet
   const BookingCard = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-4 sm:p-6 space-y-5 sm:space-y-6">
+    <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)] p-4 sm:p-6 space-y-5 sm:space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">Configure Session</h3>
@@ -663,15 +860,11 @@ const BookSessionPage = () => {
       <div className="space-y-4 sm:space-y-5">
         <div>
           <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Skill / Topic</label>
-          <select
+          <PremiumSelect
             value={selectedSkill}
-            onChange={(e) => setSelectedSkill(e.target.value)}
-            className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
-          >
-            {skillOptions.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            options={skillSelectOptions}
+            onChange={setSelectedSkill}
+          />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -683,17 +876,14 @@ const BookSessionPage = () => {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-2">Duration</label>
-            <select
-              value={durationOptions.includes(sessionDuration) ? sessionDuration : durationOptions[0]}
-              onChange={(e) => {
-                const next = Number(e.target.value);
+            <PremiumSelect
+              value={String(durationOptions.includes(sessionDuration) ? sessionDuration : durationOptions[0])}
+              options={durationSelectOptions}
+              onChange={(value) => {
+                const next = Number(value);
                 if (isSessionDuration(next)) setSessionDuration(next);
               }}
-              className="w-full text-sm font-semibold text-gray-700 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-300"
-            >
-              {durationOptions.includes(30) && <option value={30}>30 Minutes</option>}
-              {durationOptions.includes(60) && <option value={60}>60 Minutes</option>}
-            </select>
+            />
           </div>
         </div>
       </div>
@@ -936,7 +1126,7 @@ const BookSessionPage = () => {
             if (appliedFreePromo) {
               handleFreeBooking();
             } else {
-              setShowPayment(true);
+              showPaymentPage();
             }
           }}
           disabled={!selectedSlot}
@@ -983,12 +1173,46 @@ const BookSessionPage = () => {
     </div>
   );
 
+  const CareerAdsSection = () => (
+    <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)]">
+      <div className="px-4 md:px-5 py-3.5 border-b border-slate-100">
+        <h4 className="text-sm font-bold text-slate-900">Recommended for you</h4>
+      </div>
+      <div className="p-4 md:p-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 h-full min-h-[164px] flex flex-col">
+          <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wide mb-1">Career Boost</p>
+          <p className="text-sm font-semibold text-slate-900">Resume Review Add-on</p>
+          <p className="text-xs text-slate-600 mt-1">Get targeted edits from experts and improve shortlisting chances.</p>
+          <button className="mt-auto pt-3 text-xs font-bold text-blue-700 hover:underline text-left">Learn more</button>
+        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 h-full min-h-[164px] flex flex-col">
+          <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-1">Interview Prep</p>
+          <p className="text-sm font-semibold text-slate-900">Expert Interview Tips</p>
+          <p className="text-xs text-slate-600 mt-1">Go through practical tips and frameworks before your live mock interview.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/tips")}
+            className="mt-auto pt-3 text-xs font-bold text-emerald-700 hover:underline text-left"
+          >
+            Open tips
+          </button>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 h-full min-h-[164px] flex flex-col">
+          <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1">New Offer</p>
+          <p className="text-sm font-semibold text-slate-900">Bundle & Save</p>
+          <p className="text-xs text-slate-600 mt-1">Book 3 sessions together and unlock discount pricing.</p>
+          <button className="mt-auto pt-3 text-xs font-bold text-amber-700 hover:underline text-left">View plans</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="min-h-screen bg-white pb-10">
         <Navigation />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-7">
           <button
             onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 px-3 py-1.5 mb-4 rounded-full bg-white/80 border border-gray-200 text-gray-600 hover:text-[#004fcb] hover:border-[#004fcb] hover:bg-blue-50 transition-colors text-sm font-semibold shadow-sm"
@@ -996,13 +1220,13 @@ const BookSessionPage = () => {
             <ChevronLeft className="w-4 h-4" />
             Back to Home
           </button>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Main Content Areas */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-5">
               {ProfileHeader()}
 
               {/* Tabs Section */}
-              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm min-h-[520px]">
+              <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)]">
                 <div className="border-b border-gray-200">
                 <div className="flex px-3 sm:px-4 gap-2 pt-1">
                     <button
@@ -1026,12 +1250,12 @@ const BookSessionPage = () => {
                   </div>
                 </div>
 
-                <div className="p-6 md:p-8">
+                <div className="p-4 md:p-5">
                   {activeTab === "details" ? (
-                    <div className="space-y-10 animate-fadeIn">
+                    <div className="space-y-7 animate-fadeIn">
                       {/* Session Quick Stats */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="flex items-center gap-4 p-4 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
                           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <Timer className="w-6 h-6" />
                           </div>
@@ -1040,7 +1264,7 @@ const BookSessionPage = () => {
                             <div className="text-xs text-gray-500 font-semibold">Session duration</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                        <div className="flex items-center gap-4 p-4 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
                           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <Video className="w-6 h-6" />
                           </div>
@@ -1049,7 +1273,7 @@ const BookSessionPage = () => {
                             <div className="text-xs text-gray-500 font-semibold">Live interaction</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 p-5 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
+                        <div className="flex items-center gap-4 p-4 bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-200">
                           <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#004fcb] border border-gray-100">
                             <CheckCircle className="w-6 h-6" />
                           </div>
@@ -1083,20 +1307,20 @@ const BookSessionPage = () => {
                       </div>
 
                       {/* Session Structure */}
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         <h4 className="text-lg font-bold text-gray-900">Session flow</h4>
                         <p className="text-sm text-gray-600 leading-relaxed">
                           A structured mock interview with clear outcomes—optimized for fast improvements.
                         </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {[
                             { title: "Align goals", desc: "We confirm your target role, seniority, and focus areas." },
                             { title: "Mock interview", desc: "Real questions, realistic pacing, and professional evaluation." },
                             { title: "Feedback & scorecard", desc: "Strengths, gaps, and specific fixes—no generic advice." },
                             { title: "Next steps", desc: "A short action plan + resources to practice right away." }
                           ].map((step, idx) => (
-                            <div key={idx} className="p-5 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all">
+                            <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:shadow-sm transition-all">
                               <h5 className="font-bold text-gray-900 text-sm mb-1">{idx + 1}) {step.title}</h5>
                               <p className="text-sm text-gray-600 leading-relaxed">{step.desc}</p>
                             </div>
@@ -1105,7 +1329,7 @@ const BookSessionPage = () => {
                       </div>
 
                       {/* Benefits Checklist */}
-                      <div className="bg-[#004fcb]/5 p-6 rounded-xl border border-[#004fcb]/10">
+                      <div className="bg-[#004fcb]/5 p-5 rounded-xl border border-[#004fcb]/10">
                         <h4 className="text-sm font-bold text-[#002a6b] uppercase tracking-wider mb-4">Included in every session</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6">
                           {[
@@ -1125,7 +1349,7 @@ const BookSessionPage = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-8 animate-fadeIn">
+                    <div className="space-y-6 animate-fadeIn">
                       {/* Rating Summary Card */}
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
                         <div className="flex flex-col md:flex-row items-center gap-8">
@@ -1166,7 +1390,7 @@ const BookSessionPage = () => {
                       {/* Reviews List */}
                       <div className="space-y-6">
                         {reviewsLoading ? (
-                          <div className="py-20 text-center">
+                          <div className="py-14 text-center">
                             <div className="w-10 h-10 border-4 border-[#004fcb]/20 border-t-[#004fcb] rounded-full animate-spin mx-auto mb-4"></div>
                             <p className="text-sm font-medium text-gray-500">Curating client feedback...</p>
                           </div>
@@ -1219,7 +1443,7 @@ const BookSessionPage = () => {
                             </div>
                           ))
                         ) : (
-                          <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                          <div className="text-center py-14 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                               <MessageCircle className="w-8 h-8 text-gray-300" />
                             </div>
@@ -1232,33 +1456,45 @@ const BookSessionPage = () => {
                   )}
                 </div>
               </div>
+
+              {CareerAdsSection()}
             </div>
 
             {/* Sidebar Columns */}
-            <div className="hidden lg:block lg:col-span-4 h-fit sticky top-[80px]">
+            <div className="hidden lg:block lg:col-span-4 h-fit sticky top-[88px]">
               <div className="space-y-6">
                 {BookingCard()}
 
                 {/* Proof Card */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                  <h4 className="text-sm font-bold text-gray-900 mb-4 px-1">Why learn from {profile.name.split(' ')[0]}?</h4>
-                  <div className="space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)]">
+                  <div className="px-5 py-4 border-b border-slate-100">
+                    <h4 className="text-sm font-bold text-gray-900">Why learn from {profile.name.split(' ')[0]}?</h4>
+                  </div>
+                  <div className="p-5 md:p-6 space-y-4">
                     <div className="flex gap-4">
-                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
                         <Users className="w-4 h-4 text-[#004fcb]" />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-800">Trusted Guidance</p>
-                        <p className="text-[11px] text-gray-500">500+ professionals successfully coached this year.</p>
+                        <p className="text-[11px] text-gray-500">
+                          {profile.reviews > 0
+                            ? `${profile.reviews}+ reviews with strong learner feedback.`
+                            : "Verified mentor profile with structured mock interview approach."}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-4">
-                      <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center shrink-0">
                         <Zap className="w-4 h-4 text-green-600" />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-800">Fast Response</p>
-                        <p className="text-[11px] text-gray-500">Typically responds to booking requests within {profile.responseTime}.</p>
+                        <p className="text-[11px] text-gray-500">
+                          {profile.responseTime && profile.responseTime !== "New expert"
+                            ? `Typically responds to booking requests within ${profile.responseTime}.`
+                            : "New expert profile. Response times may vary by schedule."}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1285,67 +1521,6 @@ const BookSessionPage = () => {
               </div>
               <div className="px-4 py-4 pb-8">
                 {BookingCard()}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Dummy Payment Modal */}
-        {showPayment && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fadeIn">
-            <div className="bg-white rounded-[24px] p-8 shadow-2xl w-full max-w-sm border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-[#004fcb]"></div>
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                <CreditCard className="w-8 h-8 text-[#004fcb]" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Checkout Summary
-              </h3>
-              <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                Review your session details before making the payment. Secure gateway powered by Stripe.
-              </p>
-
-              <div className="bg-gray-50 rounded-xl p-4 mb-8 border border-gray-100">
-                <div className="flex justify-between text-sm py-1">
-                  <span className="text-gray-500 font-medium">Session Fee ({sessionDuration} mins)</span>
-                  <span className="text-gray-900 font-bold">{formatPrice(displayPrice)}</span>
-                </div>
-                <div className="flex justify-between text-sm py-1">
-                  <span className="text-gray-500 font-medium">Service Tax</span>
-                  <span className="text-gray-900 font-bold">₹0</span>
-                </div>
-                <div className="h-px bg-gray-200 my-2"></div>
-                <div className="flex justify-between text-base py-1">
-                  <span className="text-gray-900 font-bold">Total Amount</span>
-                  <span className="text-[#004fcb] font-bold">{formatPrice(displayPrice)}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowPayment(false);
-                    showPaymentPage();
-                  }}
-                  className="flex-1 py-4 bg-[#004fcb] text-white rounded-xl font-bold hover:bg-[#003bb5] transition-all shadow-md active:scale-95"
-                >
-                  Confirm Pay
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPayment(false);
-                    Swal.fire({
-                      title: "Payment Cancelled",
-                      text: "The checkout process was aborted. Your session is not booked.",
-                      icon: "info",
-                      iconColor: "#004fcb",
-                      confirmButtonColor: "#004fcb",
-                    });
-                  }}
-                  className="px-6 py-4 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-all"
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </div>

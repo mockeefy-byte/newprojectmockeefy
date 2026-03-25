@@ -48,19 +48,6 @@ const InfoPanel = ({ fullWidth }: InfoPanelProps) => {
         </div>
         <div className="p-3 space-y-2">
           <button
-            onClick={() => navigate('/book-session')}
-            className="group w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50/80 hover:bg-elite-blue hover:text-white border border-slate-100 hover:border-elite-blue transition-all text-left"
-          >
-            <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center shrink-0 group-hover:border-blue-200">
-              <Briefcase className="w-4 h-4 text-elite-blue group-hover:text-elite-blue" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-800 group-hover:text-white">Experts List</p>
-              <p className="text-[10px] text-slate-500 group-hover:text-blue-100 mt-0.5">Browse & book sessions</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-white shrink-0" />
-          </button>
-          <button
             onClick={() => navigate('/my-sessions')}
             className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-100 hover:border-slate-200 transition-all text-left"
           >

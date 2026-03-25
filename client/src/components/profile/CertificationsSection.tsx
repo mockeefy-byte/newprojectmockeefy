@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Award, Plus, Trash2, Calendar, Link as LinkIcon, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "../../lib/axios";
@@ -21,6 +21,7 @@ interface CertificationsSectionProps {
 
 export default function CertificationsSection({ profileData, onUpdate }: CertificationsSectionProps) {
     const { user } = useAuth();
+    const userId = user?.id || user?._id || user?.userId;
     const [isEditing, setIsEditing] = useState(false);
     const [certifications, setCertifications] = useState<Certification[]>(profileData?.certifications || []);
     const [loading, setLoading] = useState(false);
@@ -35,6 +36,10 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
     });
 
     const [editIndex, setEditIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        setCertifications(profileData?.certifications || []);
+    }, [profileData?.certifications]);
 
     const handleEdit = (index: number) => {
         const cert = certifications[index];
@@ -54,7 +59,7 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
             const res = await axios.put("/api/user/profile/certifications", {
                 certifications: updatedCerts
             }, {
-                headers: { userid: user?.id }
+                headers: { userid: userId }
             });
 
             if (res.data.success) {
@@ -88,7 +93,7 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
             const res = await axios.put("/api/user/profile/certifications", {
                 certifications: updatedCerts
             }, {
-                headers: { userid: user?.id }
+                headers: { userid: userId }
             });
 
             if (res.data.success) {
@@ -117,9 +122,6 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
         <div>
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                        <Award className="w-5 h-5 text-[#004fcb]" />
-                    </div>
                     <div>
                         <h2 className="text-lg font-bold text-elite-black tracking-tight">Certifications</h2>
                         <p className="text-[11px] text-slate-500">Add your professional certifications and licenses</p>

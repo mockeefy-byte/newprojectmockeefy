@@ -13,7 +13,6 @@ interface DashboardLayoutProps {
 /** Left sidebar (quick nav) on main user pages. */
 const SHOW_LEFT_SIDEBAR_PATHS = [
     "/",
-    "/profile",
     "/my-sessions",
     "/book-session",
     "/tips",
@@ -54,18 +53,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                         {children}
                     </section>
 
-                    {/* Right Sidebar - Desktop xl; on mobile/tablet shown below main */}
+                    {/* Right Sidebar - show on laptop and above */}
                     {(isLoggedIn || showSkeletons) && (
-                        <aside className="hidden xl:block w-[280px] shrink-0 sticky top-16 self-start">
+                        <aside className="hidden lg:block w-[280px] shrink-0 sticky top-16 self-start">
                             <div className="space-y-4">
                                 {showSkeletons ? <SkeletonInfoPanel /> : <InfoPanel />}
                             </div>
                         </aside>
                     )}
                 </div>
-                {/* Book experts & pipeline below main on mobile and tablet */}
+                {/* Book experts & pipeline below main only on mobile/tablet */}
                 {(isLoggedIn || showSkeletons) && (
-                    <div className="xl:hidden w-full mt-6 lg:mt-8">
+                    <div className="lg:hidden w-full mt-6">
                         {showSkeletons ? <SkeletonInfoPanel /> : <InfoPanel fullWidth />}
                     </div>
                 )}
