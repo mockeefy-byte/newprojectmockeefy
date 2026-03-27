@@ -791,14 +791,12 @@ export const getExpertStats = async (req, res) => {
     if (!userIdRaw) return res.status(401).json({ success: false, message: "Unauthorized" });
     const queryUserId = toObjectId(userIdRaw);
 
-    // Get expertId (string based on schema)
     const expert = await ExpertDetails.findOne({ userId: queryUserId });
     if (!expert) return res.status(404).json({ success: false, message: "Expert not found" });
 
-    // Use expert userId as expertId string for sessions (based on current implementation pattern)
-    // Or if session uses expert._id, check that. 
-    // Session schema says expertId: String. Usually it's the User._id string.
-    const expertId = String(queryUserId);
+    // Session.expertId is an ObjectId in our Session model, but historically some places
+    // may have used the ExpertDetails _id. Query both to be safe.
+    const expertIdCandidates = [queryUserId, expert._id].filter(Boolean);
 
 
 
@@ -816,17 +814,17 @@ export const getExpertStats = async (req, res) => {
       ratings
     ] = await Promise.all([
       // Total
-      import("../models/Session.js").then(m => m.default.countDocuments({ expertId })),
+      import("../models/Session.js").then(m => m.default.countDocuments({ expertId: { $in: expertIdCandidates } })),
       // Upcoming (confirmed & future)
-      import("../models/Session.js").then(m => m.default.countDocuments({ expertId, status: 'confirmed', startTime: { $gt: now } })),
+      import("../models/Session.js").then(m => m.default.countDocuments({ expertId: { $in: expertIdCandidates }, status: 'confirmed', startTime: { $gt: now } })),
       // Today (confirmed & today)
       import("../models/Session.js").then(m => m.default.countDocuments({
-        expertId,
+        expertId: { $in: expertIdCandidates },
         status: 'confirmed',
         startTime: { $gte: startOfDay, $lte: endOfDay }
       })),
       // Completed for revenue
-      import("../models/Session.js").then(m => m.default.find({ expertId, status: 'completed' }, 'price')),
+      import("../models/Session.js").then(m => m.default.find({ expertId: { $in: expertIdCandidates }, status: 'completed' }, 'price')),
       // Ratings
       import("../models/reviewModel.js").then(m => m.default.find({ expertId, reviewerRole: 'candidate' }, 'overallRating')) // Ratings GIVEN to expert
     ]);

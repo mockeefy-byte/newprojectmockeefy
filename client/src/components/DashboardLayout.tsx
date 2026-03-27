@@ -13,12 +13,8 @@ interface DashboardLayoutProps {
 /** Left sidebar (quick nav) on main user pages. */
 const SHOW_LEFT_SIDEBAR_PATHS = [
     "/",
-    "/my-sessions",
     "/book-session",
-    "/tips",
     "/career-hub",
-    "/saved-experts",
-    "/certificates",
 ];
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {

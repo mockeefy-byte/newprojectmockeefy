@@ -28,6 +28,9 @@ interface Session {
     candidateId: string;
     expertId: string;
     price?: number;
+    payoutCredited?: boolean;
+    payoutCreditedAt?: string | null;
+    payoutAmount?: number;
     candidateDetails?: CandidateDetails; // Populated from backend
 }
 
@@ -193,6 +196,10 @@ export default function Sessions() {
 
             if (res.data.success) {
                 toast.success("Review submitted successfully!");
+                const walletCredit = res.data.walletCredit;
+                if (walletCredit?.credited) {
+                    toast.success(`₹${walletCredit.amount} credited to your wallet.`);
+                }
                 setReviewSession(null);
                 setReviewForm({ // Reset form
                     overallRating: 5,
@@ -205,7 +212,15 @@ export default function Sessions() {
 
                 // Optionally update local session status to completed/reviewed
                 setAllSessions(prev => prev.map(s =>
-                    s.sessionId === reviewSession.sessionId ? { ...s, status: 'completed' } : s
+                    s.sessionId === reviewSession.sessionId
+                        ? {
+                            ...s,
+                            status: 'completed',
+                            payoutCredited: Boolean(walletCredit?.credited),
+                            payoutAmount: Number(walletCredit?.amount ?? s.payoutAmount ?? s.price ?? 0),
+                            payoutCreditedAt: walletCredit?.credited ? new Date().toISOString() : s.payoutCreditedAt
+                        }
+                        : s
                 ));
             }
         } catch (error: any) {
@@ -465,8 +480,21 @@ export default function Sessions() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className={`self-start px-3 py-1 rounded-full text-sm font-bold border capitalize ${getStatusColor(activeSession.status)}`}>
-                                                {activeSession.status}
+                                            <div className="self-start flex flex-col gap-2 items-end">
+                                                <div className={`px-3 py-1 rounded-full text-sm font-bold border capitalize ${getStatusColor(activeSession.status)}`}>
+                                                    {activeSession.status}
+                                                </div>
+                                                {activeSession.status?.toLowerCase() === 'completed' && (
+                                                    activeSession.payoutCredited ? (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-semibold border border-emerald-200 bg-emerald-50 text-emerald-700">
+                                                            Wallet credited: ₹{Number(activeSession.payoutAmount ?? activeSession.price ?? 0)}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700">
+                                                            Wallet credit pending
+                                                        </span>
+                                                    )
+                                                )}
                                             </div>
                                         </div>
 

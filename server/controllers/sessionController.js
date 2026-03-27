@@ -521,10 +521,65 @@ export const submitReview = async (req, res) => {
 
         // Update Session status
         const session = await sessionService.getSessionById(sessionId);
+        let walletCreditResult = null;
         if (session) {
             if (session.status !== 'completed') {
                 session.status = 'completed'; // Ensure it's marked completed
                 await session.save();
+            }
+
+            if (reviewerRole === 'expert') {
+                try {
+                    const payoutAmount = Number(session.price || 0);
+                    if (!session.payoutCredited && payoutAmount > 0) {
+                        let expertUser = null;
+                        const rawExpertId = session.expertId || expertId;
+
+                        if (rawExpertId) {
+                            if (typeof rawExpertId === 'string' && rawExpertId.includes('@')) {
+                                expertUser = await User.findOne({ email: rawExpertId.toLowerCase() });
+                            } else {
+                                expertUser = await User.findById(rawExpertId).catch(() => null);
+                            }
+                        }
+
+                        if (expertUser) {
+                            expertUser.walletBalance = Number(expertUser.walletBalance || 0) + payoutAmount;
+                            await expertUser.save();
+
+                            session.payoutCredited = true;
+                            session.payoutCreditedAt = new Date();
+                            session.payoutAmount = payoutAmount;
+                            await session.save();
+
+                            walletCreditResult = { credited: true, amount: payoutAmount };
+
+                            const { createNotification } = await import('../controllers/notificationController.js');
+                            await createNotification({
+                                userId: expertUser._id,
+                                type: 'wallet_credit',
+                                title: 'Session payout credited',
+                                message: `₹${payoutAmount} has been credited to your wallet for session ${session.sessionId}.`,
+                                metadata: {
+                                    sessionId: session.sessionId,
+                                    amount: payoutAmount,
+                                    link: '/dashboard/sessions'
+                                }
+                            });
+                        } else {
+                            walletCreditResult = { credited: false, amount: 0, reason: 'Expert user not found' };
+                        }
+                    } else {
+                        walletCreditResult = {
+                            credited: false,
+                            amount: Number(session.payoutAmount || 0),
+                            reason: session.payoutCredited ? 'Already credited' : 'Session amount is zero'
+                        };
+                    }
+                } catch (walletErr) {
+                    console.error("Wallet credit failed:", walletErr);
+                    walletCreditResult = { credited: false, amount: 0, reason: 'Wallet credit failed' };
+                }
             }
 
             // --- SEND EMAIL NOTIFICATION ---
@@ -574,7 +629,12 @@ export const submitReview = async (req, res) => {
             }
         }
 
-        res.status(201).json({ success: true, message: "Review submitted successfully", data: newReview });
+        res.status(201).json({
+            success: true,
+            message: "Review submitted successfully",
+            data: newReview,
+            walletCredit: walletCreditResult
+        });
     } catch (error) {
         console.error("Submit Review Error:", error);
         res.status(500).json({ success: false, message: error.message || "Server Error" });

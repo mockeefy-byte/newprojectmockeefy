@@ -1,6 +1,6 @@
 // --- Google Meet only: no socket, no WebRTC ---
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Clock, Copy, ExternalLink, HelpCircle, LogOut, PhoneOff, CheckCircle2, AlertTriangle, Star, X, User, Briefcase, CalendarDays, Timer, ChevronLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,6 +32,8 @@ const GoogleMeetOnlyMeeting = ({
   const [resolvedSession, setResolvedSession] = useState<any>(sessionData?.session || null);
   const [loadingSession, setLoadingSession] = useState<boolean>(!sessionData?.session);
   const [expertReviewSubmitted, setExpertReviewSubmitted] = useState(false);
+  const [autoClosed, setAutoClosed] = useState(false);
+  const onLeaveRef = useRef(onLeave);
   const [showMeetLinkInput, setShowMeetLinkInput] = useState(false);
   const [meetLinkInputValue, setMeetLinkInputValue] = useState('');
   const [savingMeetLink, setSavingMeetLink] = useState(false);
@@ -72,6 +74,61 @@ const GoogleMeetOnlyMeeting = ({
   };
 
   useEffect(() => {
+    onLeaveRef.current = onLeave;
+  }, [onLeave]);
+
+  const playCompletionAlarm = async () => {
+    try {
+      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as any;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      const destination = ctx.destination;
+
+      // Short beep pattern using WebAudio (no external audio files required).
+      const beepFrequencies = [880, 660, 880];
+      const beepCount = beepFrequencies.length;
+      const startAt = ctx.currentTime + 0.02;
+
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.0001, startAt);
+      masterGain.gain.exponentialRampToValueAtTime(0.35, startAt + 0.02);
+      masterGain.connect(destination);
+
+      beepFrequencies.forEach((freq: number, i: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, startAt + i * 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.8, startAt + i * 0.22 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + i * 0.22 + 0.16);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startAt + i * 0.22);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+
+        osc.start(startAt + i * 0.22);
+        osc.stop(startAt + i * 0.22 + 0.18);
+      });
+
+      const totalMs = Math.ceil(beepCount * 220 + 500);
+      window.setTimeout(() => {
+        try {
+          masterGain.disconnect();
+          ctx.close();
+        } catch (_) {}
+      }, totalMs);
+    } catch (_) {
+      // Ignore audio errors (autoplay restrictions, unsupported contexts, etc.)
+    }
+
+    try {
+      if ('vibrate' in navigator) navigator.vibrate([120, 80, 120]);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
     if (!meetingId) return;
     const fetchSession = async () => {
       try {
@@ -94,6 +151,19 @@ const GoogleMeetOnlyMeeting = ({
     const interval = setInterval(fetchReviewStatus, 20000);
     return () => clearInterval(interval);
   }, [meetingId]);
+
+  // Auto-alert + auto-close when the session is completed and expert feedback is available.
+  useEffect(() => {
+    if (!meetingId) return;
+    if (autoClosed) return;
+    const status = resolvedSession?.status;
+    if (status === 'completed' && expertReviewSubmitted) {
+      setAutoClosed(true);
+      playCompletionAlarm();
+      toast.success('Session completed. Closing meeting...');
+      window.setTimeout(() => onLeaveRef.current(), 800);
+    }
+  }, [meetingId, resolvedSession?.status, expertReviewSubmitted, autoClosed]);
 
   useEffect(() => {
     if (!sessionEndTime) return;
@@ -619,6 +689,32 @@ export default function LiveMeetingPage() {
     (!sessionFromState.endTime && sessionFromState.startTime && new Date(sessionFromState.startTime) < now)
   );
 
+  const playCompletionAlarm = () => {
+    try {
+      const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as any;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.28);
+      window.setTimeout(() => {
+        try { ctx.close(); } catch (_) {}
+      }, 400);
+    } catch (_) {}
+
+    try {
+      if ('vibrate' in navigator) navigator.vibrate([120, 80, 120]);
+    } catch (_) {}
+  };
+
   useEffect(() => {
     if (!meetingId) {
       toast.error('Invalid Meeting ID');
@@ -629,6 +725,7 @@ export default function LiveMeetingPage() {
   useEffect(() => {
     if (isSessionEndedOrExpired) {
       toast.error('This meeting has ended or expired.');
+      playCompletionAlarm();
       navigate(role === 'expert' ? '/dashboard/sessions' : '/my-sessions', { replace: true });
     }
   }, [isSessionEndedOrExpired, navigate, role]);
