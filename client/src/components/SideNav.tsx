@@ -44,22 +44,28 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
     <>
       {/* Desktop sidebar */}
       <aside className={`hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 min-h-screen ${className}`}>
-        <div className="h-[80px] flex items-center px-6 border-b border-blue-50/50 overflow-hidden">
-          <div className="relative flex items-center w-full h-full gap-3">
-            <MockeefyLogo className="h-9 w-9" variant="brand" />
-            <span className="text-xl font-logo tracking-tight text-elite-blue">Mockeefy</span>
+        <div className="h-[80px] flex items-center px-6 border-b border-gray-100 overflow-hidden shrink-0">
+          <div className="relative flex items-center w-full gap-3">
+            <div className="bg-[#004fcb] p-1.5 rounded-lg flex items-center justify-center">
+               <MockeefyLogo className="h-6 w-6 text-white" variant="mono" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-tight text-[#004fcb] leading-tight">Mockeefy</span>
+              <span className="text-[10px] font-bold tracking-[0.15em] text-gray-400 uppercase leading-none mt-0.5">Expert Terminal</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+          <h6 className="px-4 mb-2 text-[10px] font-bold tracking-[0.08em] text-gray-400 uppercase">Main Menu</h6>
           {items.map(item => (
             <NavLink
               key={item.id}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${isActive
-                  ? 'bg-[#004fcb] text-white shadow-md shadow-blue-500/20'
-                  : 'text-gray-600 hover:text-[#004fcb] hover:bg-blue-50/80'
+                `flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 group ${isActive
+                  ? 'bg-blue-50 text-[#004fcb]'
+                  : 'text-slate-500 hover:text-[#004fcb] hover:bg-slate-50'
                 }`
               }
               itemProp="url"
@@ -67,7 +73,7 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
             >
               {({ isActive }) => (
                 <>
-                  <span className={`transition-colors duration-200 ${isActive ? "text-white" : "text-gray-400 group-hover:text-[#004fcb]"}`}>
+                  <span className={`transition-colors duration-200 ${isActive ? "text-[#004fcb]" : "text-slate-400 group-hover:text-[#004fcb]"}`}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -76,24 +82,23 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
             </NavLink>
           ))}
 
-          <div className="pt-8 pb-3 px-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-            System
-          </div>
+          <div className="pt-6 mb-2"></div>
+          <h6 className="px-4 mb-2 text-[10px] font-bold tracking-[0.08em] text-gray-400 uppercase">Preferences</h6>
 
           {extras.map(item => (
             <NavLink
               key={item.id}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${isActive
-                  ? 'bg-[#004fcb] text-white shadow-md shadow-blue-500/20'
-                  : 'text-gray-600 hover:text-[#004fcb] hover:bg-blue-50/80'
+                `flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 group ${isActive
+                  ? 'bg-blue-50 text-[#004fcb]'
+                  : 'text-slate-500 hover:text-[#004fcb] hover:bg-slate-50'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={`transition-colors duration-200 ${isActive ? "text-white" : "text-gray-400 group-hover:text-[#004fcb]"}`}>
+                  <span className={`transition-colors duration-200 ${isActive ? "text-[#004fcb]" : "text-slate-400 group-hover:text-[#004fcb]"}`}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -101,6 +106,22 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
               )}
             </NavLink>
           ))}
+        </div>
+
+        <div className="px-4 pb-6 mt-auto">
+          <div className="bg-[#f0f9ff] rounded-2xl p-5 mb-4 relative overflow-hidden group hover:shadow-sm transition-all">
+            {/* Soft decorative star/sparkle icon background */}
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles absolute -right-2 top-0 text-blue-200 opacity-60 transform group-hover:scale-110 transition-transform">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a4.936 4.936 0 0 1-3.22-3.22L.727 3.125a2 2 0 0 1 1.439-1.44l6.137-1.581a4.936 4.936 0 0 1 3.22 3.22l1.581 6.136a2 2 0 0 1-1.439 1.44l-1.728.446z" transform="translate(4 4)" />
+              <path d="M12 12c-1.105 0-2-.895-2-2s.895-2 2-2 2 .895 2 2-.895 2-2 2z" />
+              <path d="M19 8c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3z" />
+            </svg>
+            <h4 className="font-bold text-[13px] text-slate-800 relative z-10 leading-snug">Upgrade to Expert+</h4>
+            <p className="text-[11px] text-slate-500 mt-1 mb-4 relative z-10 leading-relaxed pr-2">Unlock priority matching & premium support.</p>
+            <button className="w-full bg-[#0f172a] hover:bg-black text-white text-[12px] font-bold py-2.5 rounded-xl transition-colors relative z-10 shadow-sm">
+              Upgrade Now
+            </button>
+          </div>
         </div>
 
         <div className="p-4 border-t border-gray-100">

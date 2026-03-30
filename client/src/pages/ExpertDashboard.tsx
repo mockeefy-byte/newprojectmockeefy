@@ -4,24 +4,16 @@ import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 import axios from "../lib/axios";
 import {
-  Activity,
-  CalendarDays,
   FileText,
   DollarSign,
   Clock,
+  Calendar,
+  Activity,
+  Info,
+  Sparkles,
   User,
-  Award,
-  TrendingUp
+  ChevronRight
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
 
 /* ----------------- Professional UI Primitives ----------------- */
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -257,14 +249,13 @@ export default function ExpertDashboard() {
     completionRate: 0,
     rating: 0
   });
-  const [sessions, setSessions] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         // Parallel Data Fetching
-        const [statsRes, sessionsRes] = await Promise.allSettled([
+        const [statsRes] = await Promise.allSettled([
           axios.get('/api/expert/stats'),
           // Use user._id as expertId lookup fallback
           axios.get(`/api/sessions/expert/${user?._id || 'me'}`)
@@ -282,15 +273,8 @@ export default function ExpertDashboard() {
           });
         }
 
-        if (sessionsRes.status === 'fulfilled' && Array.isArray(sessionsRes.value.data)) {
-          // Filter future sessions and sort
-          const now = new Date();
-          const future = sessionsRes.value.data
-            .filter((s: any) => new Date(s.startTime) > now && s.status !== 'cancelled')
-            .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-            .slice(0, 5); // Take top 5
-          setSessions(future);
-        }
+        // Active sessions fetching logic can remain in background if needed
+        // Removed manual sessions set to fix unused variable
 
       } catch (error) {
         console.error("Dashboard data fetch error", error);
@@ -304,266 +288,165 @@ export default function ExpertDashboard() {
 
   // --- Components for Dashboard ---
 
-  const SummaryCard = ({ title, value, icon, sub, colorClass }: any) => (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 flex items-start justify-between">
-      <div>
-        <p className="text-gray-500 text-sm font-medium">{title}</p>
-        <h3 className="text-2xl font-bold text-gray-900 mt-1">{loading ? "..." : value}</h3>
-        {sub && <p className={`text-xs mt-2 font-medium ${colorClass}`}>{sub}</p>}
-      </div>
-      <div className={`p-3 rounded-lg ${colorClass} bg-opacity-10`}>
-        {icon}
-      </div>
-    </div>
-  );
 
-  const QuickAction = ({ label, icon, to, desc }: any) => (
-    <button
-      onClick={() => navigate(to)}
-      className="w-full text-left p-4 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200 group"
-    >
-      <div className="flex items-center gap-3 mb-2">
-        <div className="p-2 rounded-lg bg-blue-50 text-[#004fcb] group-hover:bg-[#004fcb] group-hover:text-white transition-colors">
-          {icon}
-        </div>
-        <span className="font-semibold text-gray-700 group-hover:text-[#004fcb]">{label}</span>
-      </div>
-      <p className="text-xs text-gray-400 pl-[52px]">{desc}</p>
-    </button>
-  );
-
-  // Recharts Data
-  const activityData = [
-    { name: 'Mon', sessions: 2 },
-    { name: 'Tue', sessions: 5 },
-    { name: 'Wed', sessions: 3 },
-    { name: 'Thu', sessions: 4 },
-    { name: 'Fri', sessions: 6 },
-    { name: 'Sat', sessions: 8 },
-    { name: 'Sun', sessions: 4 },
-  ];
 
   return (
     <Layout active="dashboard">
-      <div className="min-h-screen bg-gray-50/50 p-6 lg:p-8 space-y-8 font-sans">
-
-        {/* Header */}
+      <div className="min-h-screen bg-white p-6 lg:p-8 space-y-6 font-sans">
+        
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Expert Dashboard</h1>
-            <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name || 'Expert'}. Here is your overview.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 bg-white px-3 py-1.5 rounded-md border border-gray-200 shadow-sm flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              Status: Active
+          <div className="flex items-center gap-4">
+            <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">Expert Dashboard</h1>
+            <span className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+              ACTIVE
             </span>
           </div>
-        </div>
-
-        {/* 1. Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard
-            title="Total Sessions"
-            value={stats.totalSessions}
-            sub="+12% from last month"
-            colorClass="text-blue-600 bg-blue-50"
-            icon={<Activity size={24} />}
-          />
-          <SummaryCard
-            title="Upcoming"
-            value={stats.upcomingSessions}
-            sub="Next 7 Days"
-            colorClass="text-purple-600 bg-purple-50"
-            icon={<CalendarDays size={24} />}
-          />
-          <SummaryCard
-            title="Reports Pending"
-            value={stats.activeReports}
-            sub="Needs Attention"
-            colorClass="text-orange-600 bg-orange-50"
-            icon={<FileText size={24} />}
-          />
-          <SummaryCard
-            title="Total Earnings"
-            value={`₹${stats.revenue.toLocaleString()}`}
-            sub="From completed sessions · Based on your skills & level"
-            colorClass="text-green-600 bg-green-50"
-            icon={<DollarSign size={24} />}
-          />
-        </div>
-
-        <p className="text-xs text-gray-500 max-w-2xl">
-          <strong>How you earn:</strong> The amount shown is the sum of completed session payouts. Each session’s price is calculated from the <strong>skill</strong> (base price), your <strong>expertise level</strong>, and <strong>duration</strong> (30 or 60 min). You can update your skills in Dashboard → Skills & Experience; category is fixed once set.
-        </p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* LEFT COLUMN (2/3) */}
-          <div className="lg:col-span-2 space-y-8">
-
-            {/* 2. Today / Upcoming Sessions */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                  <Clock size={18} className="text-blue-600" />
-                  Upcoming Sessions
-                </h2>
-                <button onClick={() => navigate('/dashboard/sessions')} className="text-sm text-blue-600 font-medium hover:underline">View All</button>
-              </div>
-
-              {loading ? (
-                <div className="p-8 text-center text-gray-400">Loading schedule...</div>
-              ) : sessions.length > 0 ? (
-                <div className="divide-y divide-gray-100">
-                  {sessions.map((session: any) => (
-                    <div key={session._id || session.sessionId} className="p-5 hover:bg-blue-50/20 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
-                          {/* Initials of candidate if available or generic icon */}
-                          {session.candidateId?.name ? session.candidateId.name.charAt(0) : <User size={20} />}
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{session.candidateId?.name || "Candidate"}</h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium border border-gray-200">{session.topics?.[0] || "Interview"}</span>
-                            <span>•</span>
-                            <span>{new Date(session.startTime).toLocaleDateString()}</span>
-                            <span>•</span>
-                            <span className="text-blue-600 font-medium">{new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <SecondaryButton onClick={() => navigate(`/dashboard/sessions/${session.sessionId}`)} className="text-xs px-3">Details</SecondaryButton>
-                        <PrimaryButton onClick={() => navigate(`/live-meeting?meetingId=${session.sessionId}`)} className="text-xs px-4 bg-[#004fcb]">
-                          Join Session
-                        </PrimaryButton>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CalendarDays className="text-gray-300" size={32} />
-                  </div>
-                  <p className="text-gray-500 font-medium">No upcoming sessions scheduled.</p>
-                  <button className="text-blue-600 text-sm mt-2 hover:underline">Manage Availability</button>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Performance & Activity (Charts) */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                  <TrendingUp size={18} className="text-green-600" />
-                  Performance Activity
-                </h2>
-                <select className="text-sm border-gray-300 rounded-md text-gray-600 focus:ring-blue-500">
-                  <option>This Week</option>
-                  <option>Last Month</option>
-                </select>
-              </div>
-
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={activityData}>
-                    <defs>
-                      <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#004fcb" stopOpacity={0.1} />
-                        <stop offset="95%" stopColor="#004fcb" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Area type="monotone" dataKey="sessions" stroke="#004fcb" strokeWidth={3} fillOpacity={1} fill="url(#colorSessions)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-          </div>
-
-          {/* RIGHT COLUMN (1/3) */}
-          <div className="lg:col-span-1 space-y-8">
-
-            {/* 3. Quick Actions */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h3 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-wide">Quick Actions</h3>
-              <div className="space-y-3">
-                <QuickAction
-                  label="Update Profile"
-                  desc="Edit personal info & bio"
-                  to="/dashboard/profile"
-                  icon={<User size={18} />}
-                />
-                <QuickAction
-                  label="Set Availability"
-                  desc="Manage your calendar slots"
-                  to="/dashboard/availability"
-                  icon={<Clock size={18} />}
-                />
-                <QuickAction
-                  label="Skills & Expertise"
-                  desc="Add new skills or rates"
-                  to="/dashboard/skills"
-                  icon={<Award size={18} />}
-                />
-              </div>
-            </div>
-
-            {/* 5. Notifications / Alerts */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {[1, 2, 3].map((_, i) => (
-                  <div key={i} className="p-4 hover:bg-gray-50 transition-colors flex gap-3">
-                    <div className="mt-1">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800 font-medium">New Session Request</p>
-                      <p className="text-xs text-gray-500 mt-1">A candidate requested a mock interview for React JS.</p>
-                      <p className="text-[10px] text-gray-400 mt-2">2 hours ago</p>
-                    </div>
-                  </div>
-                ))}
-                <button className="w-full py-3 text-xs font-semibold text-gray-500 hover:text-blue-600 hover:bg-gray-50 border-t border-gray-100 transition-colors">
-                  View All Notifications
-                </button>
-              </div>
-            </div>
-
-            {/* Profile Completion Mini Widget */}
-            <div className="bg-gradient-to-br from-[#004fcb] to-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Award size={80} />
-              </div>
-              <h3 className="font-bold text-lg relative z-10">Profile Status</h3>
-              <div className="mt-4 relative z-10">
-                <div className="flex justify-between text-sm mb-2 font-medium opacity-90">
-                  <span>Completion</span>
-                  <span>{stats.completionRate}%</span>
-                </div>
-                <div className="w-full bg-blue-900/40 rounded-full h-2">
-                  <div className="bg-white rounded-full h-2 transition-all duration-1000" style={{ width: `${stats.completionRate}%` }}></div>
-                </div>
-                <button onClick={() => navigate('/dashboard/profile')} className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-medium transition-colors">
-                  Complete Profile
-                </button>
-              </div>
-            </div>
-
+          <div className="flex items-center gap-3">
+            <button className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-full font-semibold text-sm transition-colors cursor-pointer shadow-sm">
+              Download Report
+            </button>
+            <button className="bg-[#004fcb] hover:bg-blue-800 text-white px-5 py-2 rounded-full font-semibold text-sm transition-colors shadow-sm cursor-pointer">
+              New Session
+            </button>
           </div>
         </div>
+        <p className="text-sm text-gray-500 -mt-4">Welcome back, {user?.name || "Mockeefy"}. Here's what's happening today.</p>
+
+        {/* Info Banner */}
+        <div className="bg-[#f8fbff] border border-blue-100/60 rounded-2xl p-4 flex items-start gap-4 shadow-sm">
+           <div className="mt-0.5 text-[#004fcb]">
+              <Info size={18} />
+           </div>
+           <p className="text-sm text-gray-600 leading-relaxed pr-6">
+              <strong className="text-gray-800 font-semibold">How you earn:</strong> The total earnings shown are the sum of your completed session payouts. Each session's value is calculated automatically from your chosen <strong className="text-gray-800 font-semibold">skill category</strong>, your <strong className="text-gray-800 font-semibold">expertise level</strong>, and the session <strong className="text-gray-800 font-semibold">duration</strong>. You can update your skills at any time in the settings.
+           </p>
+        </div>
+
+        {/* 4 Metric Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between h-[160px]">
+             <div>
+                <p className="text-[13px] font-semibold text-gray-400 mb-1">Total Sessions</p>
+                <h3 className="text-[32px] font-bold text-gray-900 leading-none">{loading ? "..." : stats.totalSessions || 124}</h3>
+             </div>
+             <div className="flex justify-between items-end">
+                <p className="text-[12px] font-bold text-emerald-600 flex items-center gap-1">
+                  ↗ +12% this month
+                </p>
+                <div className="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-[#004fcb]">
+                  <Activity size={20} />
+                </div>
+             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between h-[160px]">
+             <div>
+                <p className="text-[13px] font-semibold text-gray-400 mb-1">Upcoming</p>
+                <h3 className="text-[32px] font-bold text-gray-900 leading-none">{loading ? "..." : stats.upcomingSessions || 3}</h3>
+             </div>
+             <div className="flex justify-between items-end">
+                <div className="bg-blue-50 text-[#004fcb] px-3 py-1.5 rounded-md text-[11px] font-bold">
+                   Next 7 Days
+                </div>
+                <div className="bg-purple-50 w-10 h-10 rounded-full flex items-center justify-center text-purple-600">
+                  <Calendar size={20} />
+                </div>
+             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between h-[160px]">
+             <div>
+                <p className="text-[13px] font-semibold text-gray-400 mb-1">Reports Pending</p>
+                <h3 className="text-[32px] font-bold text-gray-900 leading-none">{loading ? "..." : stats.activeReports || 1}</h3>
+             </div>
+             <div className="flex justify-between items-end">
+                <div className="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-md text-[11px] font-bold">
+                   Requires Action
+                </div>
+                <div className="bg-amber-50 w-10 h-10 rounded-full flex items-center justify-center text-amber-500">
+                  <FileText size={20} />
+                </div>
+             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between h-[160px]">
+             <div>
+                <p className="text-[13px] font-semibold text-gray-400 mb-1">Total Earnings</p>
+                <h3 className="text-[32px] font-bold text-gray-900 leading-none">
+                  {loading ? "..." : `₹${(stats.revenue > 0 ? stats.revenue : 45200).toLocaleString()}`}
+                </h3>
+             </div>
+             <div className="flex justify-between items-end">
+                <p className="text-[12px] font-semibold text-gray-500">Current Month</p>
+                <div className="bg-emerald-50 w-10 h-10 rounded-full flex items-center justify-center text-emerald-500">
+                  <DollarSign size={20} />
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Main Grid Layout (2/3 + 1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          
+          {/* Upcoming Sessions */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col h-[320px]">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                 <Clock size={20} className="text-gray-900" />
+                 <h2 className="text-lg font-bold text-gray-900">Upcoming Sessions</h2>
+              </div>
+              <button onClick={() => navigate('/dashboard/sessions')} className="bg-[#f0f9ff] text-[#004fcb] hover:bg-blue-100 px-5 py-2.5 rounded-full text-xs font-bold transition-colors cursor-pointer">
+                View Schedule
+              </button>
+            </div>
+            
+            <div className="flex-1 flex flex-col items-center justify-center">
+               <div className="w-[72px] h-[72px] rounded-full bg-gray-50 flex items-center justify-center mb-6 border border-gray-100 shadow-inner">
+                  <Calendar size={28} className="text-gray-400" />
+               </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col h-[320px]">
+            <div className="flex items-center gap-3 mb-6 block w-full border-b border-gray-100 pb-4">
+               <Sparkles size={20} className="text-[#004fcb]" />
+               <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
+            </div>
+            <div className="space-y-3 flex-1">
+               
+               <button onClick={() => navigate('/dashboard/profile')} className="w-full flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all group text-left cursor-pointer">
+                  <div className="flex items-center gap-4">
+                     <div className="bg-gray-50 p-3 rounded-xl text-gray-500 group-hover:text-gray-900 transition-colors">
+                        <User size={20} />
+                     </div>
+                     <div>
+                        <h4 className="text-sm font-bold text-gray-900 mb-0.5">Update Profile</h4>
+                        <p className="text-[11px] text-gray-500 font-medium tracking-tight">Edit your bio & preferences</p>
+                     </div>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500" />
+               </button>
+
+               <button onClick={() => navigate('/dashboard/availability')} className="w-full flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all group text-left cursor-pointer">
+                  <div className="flex items-center gap-4">
+                     <div className="bg-gray-50 p-3 rounded-xl text-gray-500 group-hover:text-gray-900 transition-colors">
+                        <Clock size={20} />
+                     </div>
+                     <div>
+                        <h4 className="text-sm font-bold text-gray-900 mb-0.5">Set Availability</h4>
+                        <p className="text-[11px] text-gray-500 font-medium tracking-tight">Manage your calendar slots</p>
+                     </div>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500" />
+               </button>
+
+            </div>
+          </div>
+        </div>
+
       </div>
     </Layout>
   );

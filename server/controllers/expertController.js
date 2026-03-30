@@ -826,7 +826,7 @@ export const getExpertStats = async (req, res) => {
       // Completed for revenue
       import("../models/Session.js").then(m => m.default.find({ expertId: { $in: expertIdCandidates }, status: 'completed' }, 'price')),
       // Ratings
-      import("../models/reviewModel.js").then(m => m.default.find({ expertId, reviewerRole: 'candidate' }, 'overallRating')) // Ratings GIVEN to expert
+      import("../models/reviewModel.js").then(m => m.default.find({ expertId: { $in: expertIdCandidates }, reviewerRole: 'candidate' }, 'overallRating')) // Ratings GIVEN to expert
     ]);
 
     // Calculate revenue

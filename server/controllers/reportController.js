@@ -45,11 +45,51 @@ export const createReport = async (req, res) => {
 
         await newReport.save();
 
-        // Update session status if needed? (optional)
-        // session.status = 'completed'; // usually already completed
-        // await session.save();
+        // Payout Expert
+        let walletCreditResult = null;
+        try {
+            const payoutAmount = Number(session.price || 0);
+            if (!session.payoutCredited && payoutAmount > 0) {
+                const User = (await import('../models/User.js')).default;
+                const expertUser = await User.findById(expertId);
+                
+                if (expertUser) {
+                    expertUser.walletBalance = Number(expertUser.walletBalance || 0) + payoutAmount;
+                    await expertUser.save();
 
-        res.status(201).json({ message: "Report submitted successfully", report: newReport });
+                    session.payoutCredited = true;
+                    session.payoutCreditedAt = new Date();
+                    session.payoutAmount = payoutAmount;
+                    session.status = 'evaluated';
+                    await session.save();
+
+                    walletCreditResult = { credited: true, amount: payoutAmount };
+
+                    const { createNotification } = await import('./notificationController.js');
+                    await createNotification({
+                        userId: expertUser._id,
+                        type: 'wallet_credit',
+                        title: 'Session payout credited',
+                        message: `₹${payoutAmount} has been credited to your wallet for session.`,
+                        metadata: {
+                            sessionId: session.sessionId || sessionId,
+                            amount: payoutAmount,
+                            link: '/dashboard/earnings'
+                        }
+                    });
+                } else {
+                    walletCreditResult = { credited: false, reason: 'Expert user not found' };
+                }
+            } else {
+                session.status = 'evaluated';
+                await session.save();
+                walletCreditResult = { credited: false, reason: session.payoutCredited ? 'Already credited' : 'Zero amount session' };
+            }
+        } catch (walletErr) {
+            console.error("Wallet credit inside createReport failed:", walletErr);
+        }
+
+        res.status(201).json({ message: "Report submitted successfully", report: newReport, walletCredit: walletCreditResult });
 
     } catch (error) {
         console.error("Error creating report:", error);

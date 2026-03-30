@@ -7,12 +7,13 @@ import { getProfileImageUrl } from "../lib/imageUtils";
 import {
   Bell,
   Menu,
-  ChevronDown,
   User,
   Settings,
   LogOut,
   CreditCard,
-  Calendar
+  Calendar,
+  Search,
+  HelpCircle
 } from "lucide-react";
 
 interface Notification {
@@ -132,7 +133,7 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
 
   return (
     <header className="h-[80px] w-full bg-white border-b border-blue-100/50 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-1">
         {/* Mobile Menu Button - Using consistent styling */}
         <button
           onClick={onOpenSidebar}
@@ -142,7 +143,15 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
           <Menu size={24} />
         </button>
 
-        {/* Optional: Breadcrumbs or Page Title could go here safely */}
+        {/* Search Bar - styled like the mock */}
+        <div className="hidden lg:flex items-center bg-gray-50 border border-gray-100 rounded-full px-4 py-2.5 w-[420px]">
+          <Search size={18} className="text-gray-400 mr-2" />
+          <input
+            type="text"
+            placeholder="Search sessions, candidates..."
+            className="bg-transparent border-none outline-none text-[13px] text-gray-700 w-full placeholder:text-gray-400"
+          />
+        </div>
       </div>
 
       <div className="flex items-center space-x-2 lg:space-x-4">
@@ -154,14 +163,14 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
               setIsProfileOpen(false);
               if (!isNotificationsOpen && user) fetchNotifications();
             }}
-            className="p-2 text-slate-500 hover:text-[#004fcb] rounded-lg hover:bg-blue-50 transition-all active:scale-95"
+            className="p-2 text-gray-500 hover:text-[#004fcb] rounded-full hover:bg-gray-100 transition-all active:scale-95 flex items-center justify-center shrink-0 w-10 h-10"
             aria-label="Notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 bg-[#004fcb] text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold border-2 border-white">
-                {unreadCount}
-              </span>
+               <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-bold border-2 border-white">
+                 {unreadCount > 9 ? '9+' : unreadCount}
+               </span>
             )}
           </button>
 
@@ -210,19 +219,30 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
           )}
         </div>
 
-        {/* Separator */}
-        <div className="h-6 w-px bg-gray-200 mx-2"></div>
+        <button className="p-2 text-gray-500 hover:text-[#004fcb] rounded-full hover:bg-gray-100 transition-all flex items-center justify-center shrink-0 w-10 h-10">
+          <HelpCircle size={20} />
+        </button>
+
+        {/* Separator omitted in the image, so we use spacing instead */}
 
         {/* Profile Dropdown */}
-        <div className="relative" ref={profileRef}>
+        <div className="relative ml-2" ref={profileRef}>
           <button
             onClick={() => {
               setIsProfileOpen((s) => !s);
               setIsNotificationsOpen(false);
             }}
-            className="flex items-center space-x-3 p-1 rounded-xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 group"
+            className="flex items-center space-x-3 p-1 rounded-xl transition-all border border-transparent group"
           >
-            <div className="w-9 h-9 rounded-lg bg-blue-100 border border-blue-200 overflow-hidden">
+            <div className="hidden lg:flex flex-col text-right">
+              <p className="text-[13px] font-bold text-gray-900 leading-none mb-1">
+                {user?.name || "Mockeefy"}
+              </p>
+              <p className="text-[10px] font-medium text-gray-400 leading-none">
+                {user?.userType === 'expert' ? "Expert Reviewer" : "User"}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#004fcb] flex items-center justify-center overflow-hidden ring-2 ring-transparent group-hover:ring-[#004fcb]/20 transition-all">
               <img
                 src={avatarSrc}
                 alt="profile"
@@ -230,12 +250,7 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
                 onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
               />
             </div>
-            <div className="hidden lg:block text-left">
-              <p className="text-sm font-semibold text-slate-700 leading-none group-hover:text-[#004fcb] transition-colors">
-                {user?.name?.split(" ")[0] || "User"}
-              </p>
-            </div>
-            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isProfileOpen ? "rotate-180" : ""}`} />
+            {/* Omit ChevronDown to match the mock */}
           </button>
 
           {isProfileOpen && (
