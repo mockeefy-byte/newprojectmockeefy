@@ -123,7 +123,7 @@ export default function CertificationsSection({ profileData, onUpdate }: Certifi
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div>
-                        <h2 className="text-lg font-bold text-elite-black tracking-tight">Certifications</h2>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Certifications</h2>
                         <p className="text-[11px] text-slate-500">Add your professional certifications and licenses</p>
                     </div>
                 </div>

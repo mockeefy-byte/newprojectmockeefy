@@ -15,8 +15,7 @@ export const getExpertReviews = async (req, res) => {
 
         const reviews = await Review.find({
             expertId: expertId,
-            isVisible: true,
-            reviewerRole: 'candidate' // We usually want to show reviews FROM candidates TO experts
+            isVisible: true
         }).sort({ createdAt: -1 });
 
         // Populate reviewer details manually

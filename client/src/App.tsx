@@ -38,6 +38,8 @@ import WatchMock from "./pages/WatchMock";
 import AiInterview from "./pages/AiInterview";
 import SubscriptionPlans from "./pages/SubscriptionPlans";
 import UserShell from "./components/UserShell";
+import { ResumeProvider } from "./context/ResumeContext";
+import { ResumeBuilderPage } from "./pages/ResumeBuilder";
 
 import PendingExpertsTable from "./components/PendingExpertsTable";
 import RejectedExpertsTable from "./components/RejectedExpertsTable";
@@ -116,6 +118,7 @@ function AppRoutes() {
           <Route path="/book-session" element={<BookSessionPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/live-meeting/:sessionId?" element={<LiveMeeting />} />
+          <Route path="/resume-builder" element={<ResumeBuilderPage />} />
 
           {/* App shell (keeps nav/side panels stable, no flicker) */}
           <Route element={<UserShell />}>
@@ -178,8 +181,10 @@ export default function App() {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <Toaster richColors position="top-right" />
-        <AppRoutes />
+        <ResumeProvider>
+          <Toaster richColors position="top-right" />
+          <AppRoutes />
+        </ResumeProvider>
       </QueryClientProvider>
     </>
   );

@@ -1189,6 +1189,38 @@ export const getVerifiedExperts = async (req, res) => {
           path: "$userDetails",
           preserveNullAndEmptyArrays: false // Only show experts with valid user account
         }
+      },
+      {
+        $lookup: {
+          from: "reviews",
+          let: { expertObjId: "$userId", expertStrId: { $toString: "$userId" } },
+          pipeline: [
+            { 
+              $match: { 
+                $expr: { 
+                   $or: [
+                      { $eq: ["$expertId", "$$expertObjId"] },
+                      { $eq: ["$expertId", "$$expertStrId"] }
+                   ] 
+                },
+                isVisible: true 
+              } 
+            }
+          ],
+          as: "reviewsList"
+        }
+      },
+      {
+        $addFields: {
+          avgRating: {
+            $cond: {
+               if: { $gt: [{ $size: "$reviewsList" }, 0] },
+               then: { $round: [{ $avg: "$reviewsList.overallRating" }, 1] },
+               else: 0
+            }
+          },
+          reviewCount: { $size: "$reviewsList" }
+        }
       }
     );
 
@@ -1222,6 +1254,10 @@ export const getVerifiedExperts = async (req, res) => {
         userId: expert.userId,
         profileImage: expert.profileImage || "",
         price: price, // Dynamic Price
+        metrics: {
+          avgRating: expert.avgRating || 0,
+          totalReviews: expert.reviewCount || 0
+        },
         personalInformation: {
           userName: expert.userDetails?.name || "Expert",
           mobile: expert.userDetails?.personalInfo?.phone || expert.personalInformation?.mobile || "",

@@ -121,7 +121,10 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
             <div className="flex items-center gap-2.5 mb-6 mt-1">
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50/40 border border-amber-100/50">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span className="text-[12px] font-bold text-gray-800">{mentor.rating.toFixed(1)}+</span>
+                    <span className="text-[12px] font-bold text-gray-800">{mentor.rating > 0 ? mentor.rating.toFixed(1) : "New"}</span>
+                    {mentor.reviews > 0 && (
+                        <span className="text-[10px] font-bold text-gray-500 ml-0.5">({mentor.reviews} Reviews)</span>
+                    )}
                 </div>
                 <div className="px-4 py-1 rounded-full bg-gray-50/80 border border-gray-100 text-[12px] font-bold text-gray-600">
                     {mentor.category || "IT"}

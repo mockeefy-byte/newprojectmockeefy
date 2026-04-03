@@ -85,8 +85,8 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
   return (
     <div className="space-y-6 font-sans">
       <div>
-        <h2 className="text-lg font-bold text-elite-black tracking-tight">Job Preferences</h2>
-        <p className="text-[11px] text-slate-500 mt-0.5">Set your job preferences and expectations</p>
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">Job Preferences</h2>
+        <p className="text-[13px] font-medium text-slate-500 mt-1">Set your job preferences and expectations</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

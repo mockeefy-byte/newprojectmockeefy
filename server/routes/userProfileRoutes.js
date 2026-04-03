@@ -12,7 +12,12 @@ import {
     updatePreferences,
     saveProfileImage,
     updateCertifications,
-    getResumeData
+    getResumeData,
+    getUserResumes,
+    createResume,
+    updateResume,
+    deleteResume,
+    setDefaultResume
 } from "../controllers/userProfileController.js";
 import { uploadUserProfile } from "../middleware/upload.js";
 
@@ -23,6 +28,13 @@ router.get("/profile", getUserProfile);
 
 // Get Resume Data (New)
 router.get("/profile/resume", getResumeData);
+
+// Resume Management Routes
+router.get("/resumes", getUserResumes);
+router.post("/resumes", createResume);
+router.put("/resumes/:id", updateResume);
+router.delete("/resumes/:id", deleteResume);
+router.patch("/resumes/:id/default", setDefaultResume);
 
 // Update personal info
 router.put("/profile/personal", updatePersonalInfo);

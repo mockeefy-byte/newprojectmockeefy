@@ -36,10 +36,8 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
 
-  // Cast to specific ID type if needed, but here simple length check
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Fetch notifications for logged in user
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
@@ -58,7 +56,6 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
     else setNotifications([]);
   }, [user, fetchNotifications]);
 
-  // Click outside & Escape close handler
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
@@ -83,7 +80,6 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
     };
   }, []);
 
-  // Mark a single notification as read
   const markAsRead = async (id: string) => {
     try {
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -94,7 +90,6 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
     }
   };
 
-  // Mark all as read
   const markAllAsRead = async () => {
     try {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -115,47 +110,26 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
     setIsProfileOpen(false);
   };
 
-  // Enhanced Notification Icon Helper
-  const getNotificationIcon = (type: Notification["type"]) => {
-    switch (type) {
-      case "success":
-        return <div className="w-2 h-2 rounded-full bg-green-500 mt-2" />;
-      case "warning":
-        return <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2" />;
-      case "error":
-        return <div className="w-2 h-2 rounded-full bg-red-500 mt-2" />;
-      default:
-        return <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />;
-    }
-  };
-
   const avatarSrc = getProfileImageUrl(user?.profileImage || (user as any)?.photoUrl);
 
   return (
-    <header className="h-[80px] w-full bg-white border-b border-blue-100/50 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center gap-3 flex-1">
-        {/* Mobile Menu Button - Using consistent styling */}
-        <button
-          onClick={onOpenSidebar}
-          className="lg:hidden p-2 text-slate-500 hover:text-[#004fcb] hover:bg-blue-50 rounded-lg transition-colors duration-200"
-          aria-label="Open sidebar"
-        >
+    <header className="h-[80px] w-full bg-white border-b border-gray-100 px-6 flex items-center justify-between sticky top-0 z-40">
+      <div className="flex items-center gap-4 flex-1">
+        <button onClick={onOpenSidebar} className="xl:hidden p-2 text-gray-500 hover:text-blue-600 rounded-lg">
           <Menu size={24} />
         </button>
 
-        {/* Search Bar - styled like the mock */}
-        <div className="hidden lg:flex items-center bg-gray-50 border border-gray-100 rounded-full px-4 py-2.5 w-[420px]">
-          <Search size={18} className="text-gray-400 mr-2" />
+        <div className="hidden md:flex items-center bg-[#f8faff] border border-gray-100 rounded-2xl px-5 py-3 w-[460px] max-w-full group focus-within:ring-2 focus-within:ring-[#3b5cf1]/20 focus-within:border-[#3b5cf1]/30 transition-all">
+          <Search size={18} className="text-[#9ca3af] mr-3" />
           <input
             type="text"
             placeholder="Search sessions, candidates..."
-            className="bg-transparent border-none outline-none text-[13px] text-gray-700 w-full placeholder:text-gray-400"
+            className="bg-transparent border-none outline-none text-[14px] text-gray-700 w-full placeholder:text-[#9ca3af] font-medium"
           />
         </div>
       </div>
 
-      <div className="flex items-center space-x-2 lg:space-x-4">
-        {/* Notifications */}
+      <div className="flex items-center space-x-6">
         <div className="relative" ref={notificationsRef}>
           <button
             onClick={() => {
@@ -163,164 +137,102 @@ export default function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }
               setIsProfileOpen(false);
               if (!isNotificationsOpen && user) fetchNotifications();
             }}
-            className="p-2 text-gray-500 hover:text-[#004fcb] rounded-full hover:bg-gray-100 transition-all active:scale-95 flex items-center justify-center shrink-0 w-10 h-10"
+            className="text-[#9ca3af] hover:text-[#3b5cf1] transition-colors relative"
             aria-label="Notifications"
           >
-            <Bell size={20} />
+            <Bell size={22} strokeWidth={2} />
             {unreadCount > 0 && (
-               <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-bold border-2 border-white">
+               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] rounded-full h-4 w-4 flex items-center justify-center font-bold border-2 border-white">
                  {unreadCount > 9 ? '9+' : unreadCount}
                </span>
             )}
           </button>
-
+          
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-3 w-80 bg-white border border-blue-100 rounded-xl shadow-xl z-50 overflow-hidden ring-1 ring-black/5">
-              <div className="px-4 py-3 border-b border-blue-50 bg-slate-50/50 flex justify-between items-center">
-                <h3 className="font-semibold text-slate-900 text-sm">Notifications</h3>
-                {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                    Mark all read
-                  </button>
-                )}
-              </div>
-
-              <div className="max-h-96 overflow-y-auto">
-                {loadingNotifications ? (
-                  <div className="px-4 py-6 text-center text-slate-400 text-sm">Loading...</div>
-                ) : notifications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 text-sm">No new notifications</div>
-                ) : (
-                  notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`px-4 py-3 border-b border-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors ${!notification.read ? 'bg-blue-50/20' : ''}`}
-                      onClick={() => markAsRead(notification.id)}
-                    >
-                      <div className="flex items-start gap-3">
-                        {getNotificationIcon(notification.type)}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800">{notification.title}</p>
-                          <p className="text-xs text-slate-500 mt-1 truncate">{notification.message}</p>
-                          <p className="text-[10px] text-slate-400 mt-1">{notification.time}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="px-4 py-2 border-t border-slate-50 bg-slate-50/30">
-                <Link to="/notifications" onClick={closeAllDropdowns} className="w-full block text-center text-xs font-medium text-blue-600 hover:text-blue-700 py-1">
-                  View all
-                </Link>
-              </div>
-            </div>
+             <div className="absolute right-0 mt-4 w-80 bg-white border border-gray-100 rounded-xl shadow-xl z-50">
+                <div className="px-4 py-3 border-b border-gray-50 flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 text-sm">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllAsRead} className="text-xs text-blue-600 font-medium">Mark all read</button>
+                  )}
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                    {loadingNotifications ? (
+                      <div className="p-4 text-center text-sm text-gray-400">Loading...</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-gray-400">No new notifications</div>
+                    ) : (
+                      notifications.map(n => (
+                         <div key={n.id} onClick={() => markAsRead(n.id)} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer">
+                            <p className="text-sm font-medium">{n.title}</p>
+                            <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+                         </div>
+                      ))
+                    )}
+                </div>
+             </div>
           )}
         </div>
 
-        <button className="p-2 text-gray-500 hover:text-[#004fcb] rounded-full hover:bg-gray-100 transition-all flex items-center justify-center shrink-0 w-10 h-10">
-          <HelpCircle size={20} />
+        <button className="text-[#9ca3af] hover:text-[#3b5cf1] transition-colors">
+          <HelpCircle size={22} strokeWidth={2} />
         </button>
 
-        {/* Separator omitted in the image, so we use spacing instead */}
+        {/* Separator */}
+        <div className="w-px h-8 bg-gray-200 mx-2"></div>
 
-        {/* Profile Dropdown */}
-        <div className="relative ml-2" ref={profileRef}>
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => {
               setIsProfileOpen((s) => !s);
               setIsNotificationsOpen(false);
             }}
-            className="flex items-center space-x-3 p-1 rounded-xl transition-all border border-transparent group"
+            className="flex items-center space-x-3 text-left"
           >
-            <div className="hidden lg:flex flex-col text-right">
-              <p className="text-[13px] font-bold text-gray-900 leading-none mb-1">
+            <div className="hidden md:flex flex-col items-end">
+              <p className="text-[14px] font-bold text-[#111827] leading-none mb-1">
                 {user?.name || "Mockeefy"}
               </p>
-              <p className="text-[10px] font-medium text-gray-400 leading-none">
+              <p className="text-[11px] font-medium text-[#64748b] leading-none">
                 {user?.userType === 'expert' ? "Expert Reviewer" : "User"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#004fcb] flex items-center justify-center overflow-hidden ring-2 ring-transparent group-hover:ring-[#004fcb]/20 transition-all">
-              <img
-                src={avatarSrc}
-                alt="profile"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.currentTarget.src = getProfileImageUrl(null); }}
-              />
+            <div className="w-10 h-10 rounded-[14px] bg-[#eef2ff] text-[#3b5cf1] flex items-center justify-center overflow-hidden">
+               {user?.profileImage || (user as any)?.photoUrl ? (
+                  <img src={avatarSrc} alt="profile" className="w-full h-full object-cover" />
+               ) : (
+                  <User size={20} strokeWidth={2} />
+               )}
             </div>
-            {/* Omit ChevronDown to match the mock */}
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 mt-3 w-64 bg-white border border-blue-100 rounded-xl shadow-xl py-2 z-50 ring-1 ring-black/5">
-              <div className="px-4 py-3 border-b border-blue-50 bg-slate-50/50 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-slate-200 overflow-hidden">
-                  <img
-                    src={avatarSrc}
-                    alt="p"
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.src = getProfileImageUrl(null) }}
-                  />
-                </div>
-                <div className="overflow-hidden">
-                  <p className="font-bold text-slate-800 text-sm truncate">{user?.name}</p>
-                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                </div>
+            <div className="absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+              <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-3">
+                 <div className="w-9 h-9 shrink-0 rounded-lg bg-[#eef2ff] flex justify-center items-center text-[#3b5cf1]">
+                    {user?.profileImage ? <img src={avatarSrc} className="w-full h-full object-cover rounded-lg" /> : <User size={18}/>}
+                 </div>
+                 <div className="overflow-hidden">
+                   <p className="font-bold text-gray-900 text-[14px] truncate">{user?.name}</p>
+                   <p className="text-[12px] text-gray-500 truncate">{user?.email}</p>
+                 </div>
               </div>
-
-              {user?.userType === "expert" && (
-                <div className="py-2">
-                  <Link
-                    to="/dashboard/profile" // Fixed path to match updated routing
-                    className="flex items-center px-4 py-2.5 hover:bg-blue-50 text-slate-600 hover:text-[#004fcb] text-sm font-medium transition-colors"
-                    onClick={closeAllDropdowns}
-                  >
-                    <User size={18} className="mr-3 text-slate-400" />
-                    Profile Settings
-                  </Link>
-                  <Link
-                    to="/dashboard/sessions"
-                    className="flex items-center px-4 py-2.5 hover:bg-blue-50 text-slate-600 hover:text-[#004fcb] text-sm font-medium transition-colors"
-                    onClick={closeAllDropdowns}
-                  >
-                    <Calendar size={18} className="mr-3 text-slate-400" />
-                    My Sessions
-                  </Link>
-                  {/* Availability Link removed from sidebar but kept here optionally or remove if desired. 
-                       User asked to remove from sidebar, keeping consistent might mean removing here too if redundancy is bad.
-                       For now, I'll keep generic settings or payments links. */}
-                  <Link
-                    to="/payment"
-                    className="flex items-center px-4 py-2.5 hover:bg-blue-50 text-slate-600 hover:text-[#004fcb] text-sm font-medium transition-colors"
-                    onClick={closeAllDropdowns}
-                  >
-                    <CreditCard size={18} className="mr-3 text-slate-400" />
-                    Payments
-                  </Link>
-                </div>
-              )}
-
-              {/* Admin specific links or General Settings */}
-              <div className="py-1">
-                <Link
-                  to={user?.userType === 'expert' ? "/dashboard/settings" : "/settings"}
-                  className="flex items-center px-4 py-2.5 hover:bg-blue-50 text-slate-600 hover:text-[#004fcb] text-sm font-medium transition-colors"
-                  onClick={closeAllDropdowns}
-                >
-                  <Settings size={18} className="mr-3 text-slate-400" />
-                  Settings
+              
+              <div className="py-2">
+                <Link to="/dashboard/profile" onClick={closeAllDropdowns} className="flex items-center px-4 py-2 hover:bg-gray-50 text-[13px] font-medium text-gray-700">
+                  <User size={16} className="mr-3 text-gray-400" /> Profile Settings
+                </Link>
+                <Link to="/dashboard/sessions" onClick={closeAllDropdowns} className="flex items-center px-4 py-2 hover:bg-gray-50 text-[13px] font-medium text-gray-700">
+                  <Calendar size={16} className="mr-3 text-gray-400" /> My Sessions
+                </Link>
+                <Link to="/dashboard/settings" onClick={closeAllDropdowns} className="flex items-center px-4 py-2 hover:bg-gray-50 text-[13px] font-medium text-gray-700">
+                  <Settings size={16} className="mr-3 text-gray-400" /> Settings
                 </Link>
               </div>
 
-              <div className="border-t border-blue-50 mt-1 px-2 py-2">
-                <button
-                  onClick={() => { handleSignOut(); closeAllDropdowns(); }}
-                  className="flex w-full items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
-                >
-                  <LogOut size={16} className="mr-3" />
-                  Sign Out
+              <div className="border-t border-gray-50 py-1">
+                <button onClick={() => { handleSignOut(); closeAllDropdowns(); }} className="flex w-full items-center px-4 py-2 text-red-600 hover:bg-red-50 text-[13px] font-medium">
+                  <LogOut size={16} className="mr-3" /> Sign Out
                 </button>
               </div>
             </div>

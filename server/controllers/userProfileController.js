@@ -466,3 +466,130 @@ export const getResumeData = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal error" });
     }
 };
+
+/* ----------------- Resume Management ------------------ */
+
+// Get all user resumes
+export const getUserResumes = async (req, res) => {
+    try {
+        const userId = req.headers.userid;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID required" });
+        }
+
+        // For now, return mock data since we don't have a Resume model yet
+        // In a real implementation, you'd query the Resume collection
+        const mockResumes = [
+            {
+                _id: "resume_1",
+                title: "Software Engineer Resume",
+                template: "Modern Professional",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isDefault: true
+            },
+            {
+                _id: "resume_2",
+                title: "Full Stack Developer Resume",
+                template: "Minimal ATS",
+                createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                isDefault: false
+            }
+        ];
+
+        return res.json({ success: true, data: mockResumes });
+    } catch (err) {
+        console.error("getUserResumes error:", err);
+        return res.status(500).json({ success: false, message: "Internal error" });
+    }
+};
+
+// Create new resume
+export const createResume = async (req, res) => {
+    try {
+        const userId = req.headers.userid;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID required" });
+        }
+
+        const { title, template, resumeData } = req.body;
+
+        // Mock implementation - in real app, save to database
+        const newResume = {
+            _id: `resume_${Date.now()}`,
+            title: title || "Untitled Resume",
+            template: template || "Modern Professional",
+            resumeData: resumeData || {},
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isDefault: false
+        };
+
+        return res.json({ success: true, data: newResume });
+    } catch (err) {
+        console.error("createResume error:", err);
+        return res.status(500).json({ success: false, message: "Internal error" });
+    }
+};
+
+// Update resume
+export const updateResume = async (req, res) => {
+    try {
+        const userId = req.headers.userid;
+        const resumeId = req.params.id;
+        if (!userId || !resumeId) {
+            return res.status(400).json({ success: false, message: "User ID and Resume ID required" });
+        }
+
+        const { title, template, resumeData } = req.body;
+
+        // Mock implementation - in real app, update in database
+        const updatedResume = {
+            _id: resumeId,
+            title: title || "Untitled Resume",
+            template: template || "Modern Professional",
+            resumeData: resumeData || {},
+            updatedAt: new Date().toISOString()
+        };
+
+        return res.json({ success: true, data: updatedResume });
+    } catch (err) {
+        console.error("updateResume error:", err);
+        return res.status(500).json({ success: false, message: "Internal error" });
+    }
+};
+
+// Delete resume
+export const deleteResume = async (req, res) => {
+    try {
+        const userId = req.headers.userid;
+        const resumeId = req.params.id;
+        if (!userId || !resumeId) {
+            return res.status(400).json({ success: false, message: "User ID and Resume ID required" });
+        }
+
+        // Mock implementation - in real app, delete from database
+        return res.json({ success: true, message: "Resume deleted successfully" });
+    } catch (err) {
+        console.error("deleteResume error:", err);
+        return res.status(500).json({ success: false, message: "Internal error" });
+    }
+};
+
+// Set default resume
+export const setDefaultResume = async (req, res) => {
+    try {
+        const userId = req.headers.userid;
+        const resumeId = req.params.id;
+        if (!userId || !resumeId) {
+            return res.status(400).json({ success: false, message: "User ID and Resume ID required" });
+        }
+
+        // Mock implementation - in real app, update default flag in database
+        return res.json({ success: true, message: "Default resume updated successfully" });
+    } catch (err) {
+        console.error("setDefaultResume error:", err);
+        return res.status(500).json({ success: false, message: "Internal error" });
+    }
+};

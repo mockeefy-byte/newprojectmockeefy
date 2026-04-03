@@ -99,8 +99,8 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-lg font-bold text-elite-black tracking-tight">Work Experience</h2>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Your professional background</p>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Work Experience</h2>
+                    <p className="text-[13px] font-medium text-slate-500 mt-1">Your professional background</p>
                 </div>
                 {experienceLevel !== "Fresher" && (
                     <button
@@ -253,7 +253,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-sm"
+                    className="flex items-center gap-2 px-8 py-3.5 bg-[#004fcb] text-white rounded-xl hover:bg-blue-600 transition-all disabled:opacity-50 text-[13px] font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
                 >
                     <Save className="w-3.5 h-3.5" />
                     {saving ? "Saving..." : "Save Changes"}

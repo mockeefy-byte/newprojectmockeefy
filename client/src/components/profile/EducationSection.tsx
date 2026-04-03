@@ -76,8 +76,8 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-lg font-bold text-elite-black tracking-tight">Education</h2>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Your academic background</p>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Education</h2>
+                    <p className="text-[13px] font-medium text-slate-500 mt-1">Your academic background</p>
                 </div>
                 <button
                     onClick={addEducation}
@@ -117,7 +117,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                         type="text"
                                         value={edu.degree}
                                         onChange={(e) => updateEducation(index, "degree", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all font-semibold text-gray-800"
+                                        className="w-full h-11 px-4 border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white rounded-xl text-[14px] focus:border-[#004fcb] focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-800 outline-none"
                                         placeholder="e.g. B.Tech"
                                     />
                                 </div>
@@ -128,7 +128,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                         type="text"
                                         value={edu.institution}
                                         onChange={(e) => updateEducation(index, "institution", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                        className="w-full h-11 px-4 border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white rounded-xl text-[14px] focus:border-[#004fcb] focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-800 outline-none"
                                         placeholder="University Name"
                                     />
                                 </div>
@@ -140,7 +140,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                             type="number"
                                             value={edu.startYear}
                                             onChange={(e) => updateEducation(index, "startYear", parseInt(e.target.value))}
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                            className="w-full h-11 px-4 border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white rounded-xl text-[14px] focus:border-[#004fcb] focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-800 outline-none"
                                             min="1950"
                                             max={new Date().getFullYear()}
                                         />
@@ -151,7 +151,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                                             type="number"
                                             value={edu.endYear || ""}
                                             onChange={(e) => updateEducation(index, "endYear", e.target.value ? parseInt(e.target.value) : null)}
-                                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                            className="w-full h-11 px-4 border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white rounded-xl text-[14px] focus:border-[#004fcb] focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-800 outline-none"
                                             disabled={edu.current}
                                             placeholder={edu.current ? "Present" : "Year"}
                                         />
@@ -179,7 +179,7 @@ export default function EducationSection({ profileData, onUpdate }: EducationSec
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-sm"
+                    className="flex items-center gap-2 px-8 py-3.5 bg-[#004fcb] text-white rounded-xl hover:bg-blue-600 transition-all disabled:opacity-50 text-[13px] font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
                 >
                     <Save className="w-3.5 h-3.5" />
                     {saving ? "Saving..." : "Save Changes"}
