@@ -211,21 +211,21 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
-            <div className="border-b border-slate-100 pb-5">
+        <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl">
+            <div>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-sm">
-                        <User className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                        <User className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Personal Information</h2>
-                        <p className="text-[13px] font-medium text-slate-500 mt-0.5">Update your core identity details and photo.</p>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Personal Information</h2>
+                        <p className="text-[13px] font-medium text-slate-500 mt-1">Update your core identity details and photo.</p>
                     </div>
                 </div>
             </div>
 
             {/* Profile Image Upload */}
-            <div className="bg-white border border-slate-200 rounded-[20px] p-6 sm:p-7 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 shadow-sm">
+            <div className="bg-slate-50 border border-slate-200 rounded-[28px] p-6 sm:p-7 flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8 shadow-sm">
                 <div className="relative group shrink-0">
                     {(() => {
                         const effectiveImage = profileData?.profileImage || user?.profileImage || null;
@@ -270,8 +270,8 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             className="hidden"
                             disabled={uploading}
                         />
-                        <div className="flex items-center gap-2 px-5 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-100 hover:border-slate-300 transition-all text-[13px] font-bold shadow-sm">
-                            <Upload className="w-4 h-4 text-slate-400" />
+                        <div className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-all text-[13px] font-bold shadow-lg shadow-blue-500/20">
+                            <Upload className="w-4 h-4 text-white" />
                             {uploading ? "Uploading..." : "Browse Files"}
                         </div>
                     </label>
@@ -279,7 +279,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
             </div>
 
             {/* Form Fields - Modern Grid */}
-            <div className="bg-white border border-slate-200 rounded-[24px] p-6 sm:p-8 shadow-sm">
+            <div className="pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-6">
                     <div className="space-y-1.5">
                         <label className="block text-[13px] font-bold text-slate-700 ml-1">Full Name</label>
@@ -288,7 +288,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none placeholder:text-slate-400"
                             placeholder="e.g. Jane Doe"
                         />
                     </div>
@@ -299,7 +299,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="email"
                             value={formData.email}
                             disabled
-                            className="w-full h-12 px-4 border border-slate-100 bg-slate-50 text-slate-500 rounded-xl text-[14px] font-medium cursor-not-allowed outline-none shadow-inner"
+                            className="w-full h-12 px-4 border border-slate-200 bg-slate-100 text-slate-500 rounded-2xl text-[14px] font-medium cursor-not-allowed outline-none shadow-inner"
                             placeholder="your@email.com"
                         />
                     </div>
@@ -310,7 +310,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="phone"
                             value={formData.phone}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none placeholder:text-slate-400"
                             placeholder="+1 (555) 000-0000"
                         />
                     </div>
@@ -322,7 +322,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="dateOfBirth"
                             value={formData.dateOfBirth}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none"
                         />
                     </div>
 
@@ -332,7 +332,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="gender"
                             value={formData.gender}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
                         >
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
@@ -347,7 +347,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="country"
                             value={formData.country}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
                         >
                             <option value="">Select Country</option>
                             {countries.map((c) => (
@@ -365,7 +365,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="state"
                             value={formData.state}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
                             disabled={!formData.country}
                         >
                             <option value="">{formData.country ? "Select State" : "Select Country First"}</option>
@@ -384,7 +384,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             name="city"
                             value={formData.city}
                             onChange={handleChange}
-                            className="w-full h-12 px-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
+                            className="w-full h-12 px-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none appearance-none disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5.5%207.5L10%2012.5L14.5%207.5%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%221.5%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center]"
                             disabled={!formData.state}
                         >
                             <option value="">{formData.state ? "Select City" : "Select State First"}</option>
@@ -408,7 +408,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                             type="button"
                             onClick={handleGenerateBio}
                             disabled={generatingBio}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 rounded-lg text-[12px] font-bold transition-all disabled:opacity-50 border border-blue-200/60 shadow-sm self-start group"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-[13px] font-bold transition-all disabled:opacity-50 border border-transparent shadow-lg shadow-blue-500/20 self-start group"
                         >
                             {generatingBio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-blue-500 group-hover:text-indigo-600 transition-colors" />}
                             {generatingBio ? "Generating..." : "Auto-Generate AI"}
@@ -420,7 +420,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                         onChange={handleChange}
                         rows={4}
                         maxLength={500}
-                        className="w-full p-4 border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none resize-none leading-relaxed placeholder:text-slate-400 shadow-inner"
+                        className="w-full p-4 border border-slate-200 bg-white hover:bg-slate-50 focus:bg-white rounded-2xl text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-800 outline-none resize-none leading-relaxed placeholder:text-slate-400 shadow-inner"
                         placeholder="E.g. A passionate Full Stack Developer with 4 years of experience building scalable web applications..."
                     />
                     <div className="flex justify-end mt-2 pr-1">
@@ -433,7 +433,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 text-[14px] font-bold shadow-md shadow-blue-600/20 active:scale-95 min-w-[200px]"
+                    className="flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 text-[14px] font-bold shadow-md shadow-blue-500/10 active:scale-95 min-w-[200px]"
                 >
                     {saving ? (
                         <>

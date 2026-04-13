@@ -96,16 +96,16 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Work Experience</h2>
-                    <p className="text-[13px] font-medium text-slate-500 mt-1">Your professional background</p>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Work Experience</h2>
+                    <p className="text-sm font-medium text-slate-500 mt-1">Your professional background</p>
                 </div>
                 {experienceLevel !== "Fresher" && (
                     <button
                         onClick={addExperience}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors text-[11px] font-bold"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors text-[12px] font-bold shadow-lg shadow-blue-500/20"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         Add
@@ -113,15 +113,15 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                 )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Experience Type</label>
-                <div className="flex items-center gap-2">
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-4">
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-2">Experience Type</label>
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         onClick={() => setExperienceLevel("Fresher")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                        className={`px-3 py-1.5 rounded-2xl text-xs font-bold border transition-colors ${
                             experienceLevel === "Fresher"
-                                ? "bg-blue-600 text-white border-blue-600"
+                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                         }`}
                     >
@@ -130,9 +130,9 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                     <button
                         type="button"
                         onClick={() => setExperienceLevel("Experienced")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                        className={`px-3 py-1.5 rounded-2xl text-xs font-bold border transition-colors ${
                             experienceLevel === "Experienced"
-                                ? "bg-blue-600 text-white border-blue-600"
+                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                                 : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                         }`}
                     >
@@ -147,7 +147,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
             </div>
 
             {experienceLevel !== "Fresher" && experience.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-slate-100 bg-slate-50/50 rounded-xl">
+                <div className="text-center py-8 border-2 border-dashed border-slate-100 bg-slate-50/80 rounded-[28px]">
                     <Briefcase className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-slate-500 text-[11px]">No experience added</p>
                     <button
@@ -160,12 +160,12 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
             ) : experienceLevel !== "Fresher" ? (
                 <div className="space-y-4">
                     {experience.map((exp, index) => (
-                        <div key={index} className="border border-slate-200/80 bg-white rounded-xl p-4 relative shadow-sm hover:shadow-md transition-all group">
+                        <div key={index} className="border border-slate-200/80 bg-white rounded-[28px] p-4 relative shadow-sm hover:shadow-md transition-all group">
                             <button
                                 onClick={() => removeExperience(index)}
-                                className="absolute top-3 right-3 p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                className="absolute top-3 right-3 p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-colors opacity-0 group-hover:opacity-100"
                             >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                             </button>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,7 +175,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                                         type="text"
                                         value={exp.company}
                                         onChange={(e) => updateExperience(index, "company", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all font-semibold text-slate-800"
+                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-0 transition-all font-semibold text-slate-800"
                                         placeholder="Google"
                                     />
                                 </div>
@@ -186,7 +186,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                                         type="text"
                                         value={exp.position}
                                         onChange={(e) => updateExperience(index, "position", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-0 transition-all"
                                         placeholder="Software Engineer"
                                     />
                                 </div>
@@ -197,7 +197,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                                         type="date"
                                         value={exp.startDate ? new Date(exp.startDate).toISOString().split('T')[0] : ""}
                                         onChange={(e) => updateExperience(index, "startDate", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-0 transition-all"
                                     />
                                 </div>
 
@@ -207,7 +207,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                                         type="date"
                                         value={exp.endDate ? new Date(exp.endDate).toISOString().split('T')[0] : ""}
                                         onChange={(e) => updateExperience(index, "endDate", e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all"
+                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-0 transition-all"
                                         disabled={exp.current}
                                     />
                                 </div>
@@ -231,7 +231,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                                         onChange={(e) => updateExperience(index, "description", e.target.value)}
                                         rows={2}
                                         maxLength={500}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-0 transition-all resize-none"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-0 transition-all resize-none"
                                         placeholder="Describe responsibilities..."
                                     />
                                 </div>
@@ -242,7 +242,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
             ) : null}
 
             {experienceLevel === "Fresher" && (
-                <div className="text-center py-8 border border-dashed border-blue-200 bg-blue-50/40 rounded-xl">
+                <div className="text-center py-8 border border-dashed border-blue-200 bg-blue-50/40 rounded-[28px]">
                     <Briefcase className="w-10 h-10 text-blue-300 mx-auto mb-2" />
                     <p className="text-slate-600 text-sm font-semibold">Fresher Profile Selected</p>
                     <p className="text-slate-500 text-[11px] mt-1">No prior company experience required.</p>
@@ -253,7 +253,7 @@ export default function ExperienceSection({ profileData, onUpdate }: ExperienceS
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-8 py-3.5 bg-[#004fcb] text-white rounded-xl hover:bg-blue-600 transition-all disabled:opacity-50 text-[13px] font-bold shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95"
+                    className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-all disabled:opacity-50 text-[13px] font-bold shadow-lg shadow-blue-500/20 active:scale-95"
                 >
                     <Save className="w-3.5 h-3.5" />
                     {saving ? "Saving..." : "Save Changes"}

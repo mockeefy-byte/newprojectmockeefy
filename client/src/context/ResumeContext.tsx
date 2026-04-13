@@ -147,7 +147,7 @@ export function ResumeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const nextStep = useCallback(() => {
-    setCurrentStep(prev => Math.min(prev + 1, 6));
+    setCurrentStep(prev => Math.min(prev + 1, 8));
   }, []);
 
   const prevStep = useCallback(() => {

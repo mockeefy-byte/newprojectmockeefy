@@ -126,6 +126,10 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         localStorage.removeItem('token');
         setUser(null);
         setToken(null);
+        delete axios.defaults.headers.common['Authorization'];
+        if (window.location.pathname !== '/signin' && window.location.pathname !== '/') {
+          window.location.href = '/signin?expired=true';
+        }
       } else {
         console.error('Failed to fetch profile', error);
       }

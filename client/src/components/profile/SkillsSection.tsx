@@ -85,14 +85,14 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
     );
 
     return (
-        <div className="space-y-8 font-sans">
+        <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl">
             <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Skills & Languages</h2>
-                <p className="text-[13px] font-medium text-slate-500 mt-1">Add your technical skills, soft skills, and languages</p>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Skills & Languages</h2>
+                <p className="text-sm font-medium text-slate-500 mt-1">Add your technical skills, soft skills, and languages</p>
             </div>
 
             {/* Technical Skills */}
-            <div className="space-y-4">
+            <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-[28px] p-5">
                 <div className="flex items-center gap-2">
                     <Code className="w-5 h-5 text-[#004fcb]" />
                     <h3 className="text-sm font-bold text-elite-black">Technical Skills</h3>
@@ -104,12 +104,12 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         value={newSkill.technical}
                         onChange={(e) => setNewSkill({ ...newSkill, technical: e.target.value })}
                         onKeyPress={(e) => e.key === "Enter" && addSkill("technical")}
-                        className="flex-1 px-4 py-2 border border-blue-100 bg-slate-50/50 rounded-lg focus:ring-2 focus:ring-[#004fcb]/20 focus:border-[#004fcb] transition-all"
+                        className="flex-1 px-4 py-2 border border-slate-200 bg-white rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         placeholder="e.g., React, Python, AWS"
                     />
                     <button
                         onClick={() => addSkill("technical")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors shadow-lg shadow-blue-500/20"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -131,7 +131,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
             </div>
 
             {/* Soft Skills */}
-            <div className="space-y-4">
+            <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-[28px] p-5">
                 <div className="flex items-center gap-2">
                     <Heart className="w-5 h-5 text-[#004fcb]" />
                     <h3 className="text-sm font-bold text-elite-black">Soft Skills</h3>
@@ -143,12 +143,12 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         value={newSkill.soft}
                         onChange={(e) => setNewSkill({ ...newSkill, soft: e.target.value })}
                         onKeyPress={(e) => e.key === "Enter" && addSkill("soft")}
-                        className="flex-1 px-4 py-2 border border-blue-100 bg-slate-50/50 rounded-lg focus:ring-2 focus:ring-[#004fcb]/20 focus:border-[#004fcb] transition-all"
+                        className="flex-1 px-4 py-2 border border-slate-200 bg-white rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         placeholder="e.g., Leadership, Communication, Teamwork"
                     />
                     <button
                         onClick={() => addSkill("soft")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors shadow-lg shadow-blue-500/20"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -170,7 +170,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
             </div>
 
             {/* Languages */}
-            <div className="space-y-4">
+            <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-[28px] p-5">
                 <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-[#004fcb]" />
                     <h3 className="text-sm font-bold text-elite-black">Languages</h3>
@@ -182,12 +182,12 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                         value={newSkill.languages}
                         onChange={(e) => setNewSkill({ ...newSkill, languages: e.target.value })}
                         onKeyPress={(e) => e.key === "Enter" && addSkill("languages")}
-                        className="flex-1 px-4 py-2 border border-blue-100 bg-slate-50/50 rounded-lg focus:ring-2 focus:ring-[#004fcb]/20 focus:border-[#004fcb] transition-all"
+                        className="flex-1 px-4 py-2 border border-slate-200 bg-white rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         placeholder="e.g., English, Spanish, Mandarin"
                     />
                     <button
                         onClick={() => addSkill("languages")}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors shadow-lg shadow-blue-500/20"
                     >
                         <Plus className="w-4 h-4" />
                         Add
@@ -212,7 +212,7 @@ export default function SkillsSection({ profileData, onUpdate }: SkillsSectionPr
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-md shadow-blue-200"
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-lg shadow-blue-500/20"
                 >
                     <Save className="w-4 h-4" />
                     {saving ? "Saving..." : "Save Changes"}

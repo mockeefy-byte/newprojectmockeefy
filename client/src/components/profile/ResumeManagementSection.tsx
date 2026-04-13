@@ -132,16 +132,18 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 font-sans bg-white border border-slate-200/70 rounded-[32px] shadow-[0_20px_50px_-30px_rgba(15,23,42,0.2)] p-8">
       {/* Header */}
+      <div>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Resume Management</h2>
+        <p className="text-sm font-medium text-slate-500 mt-1">Create, manage, and customize your professional resumes</p>
+      </div>
+
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900">Resume Management</h3>
-          <p className="text-sm text-slate-600 mt-1">Create, manage, and customize your professional resumes</p>
-        </div>
+        <div></div>
         <button
           onClick={() => setShowCreateOptions(!showCreateOptions)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-all disabled:opacity-50 text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95"
         >
           <Plus className="w-4 h-4" />
           Create Resume
@@ -150,24 +152,24 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
 
       {/* Create Options */}
       {showCreateOptions && (
-        <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+        <div className="bg-slate-50 border border-slate-200 rounded-[28px] p-6">
           <h4 className="text-lg font-semibold text-slate-900 mb-4">Choose a Resume Builder</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {resumeBuilders.map((builder) => (
               <div
                 key={builder.id}
                 onClick={() => handleCreateResume(builder.id)}
-                className="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                className="bg-white rounded-[28px] p-5 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
               >
-                <div className="text-2xl mb-2">{builder.icon}</div>
+                <div className="text-2xl mb-3">{builder.icon}</div>
                 <h5 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
                   {builder.name}
                 </h5>
                 <p className="text-sm text-slate-600 mt-1">{builder.description}</p>
-                <ul className="mt-3 space-y-1">
+                <ul className="mt-4 space-y-1">
                   {builder.features.map((feature, index) => (
-                    <li key={index} className="text-xs text-slate-500 flex items-center gap-1">
-                      <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+                    <li key={index} className="text-xs text-slate-500 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
                       {feature}
                     </li>
                   ))}
@@ -191,11 +193,11 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
             {resumes.map((resume: Resume) => (
               <div
                 key={resume._id}
-                className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow"
+                className="bg-white rounded-[28px] border border-slate-200 p-5 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center">
                       <FileText className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
@@ -212,24 +214,24 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => handleEditResume(resume._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-2xl hover:bg-slate-200 transition-colors"
                   >
                     <Edit className="w-3 h-3" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDuplicateResume(resume._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-2xl hover:bg-slate-200 transition-colors"
                   >
                     <Copy className="w-3 h-3" />
                     Duplicate
                   </button>
                   <button
                     onClick={() => handleSetDefault(resume._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-2xl hover:bg-blue-200 transition-colors"
                     disabled={resume.isDefault}
                   >
                     <Star className="w-3 h-3" />
@@ -237,7 +239,7 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
                   </button>
                   <button
                     onClick={() => handleDeleteResume(resume._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                    className="flex items-center gap-1 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-2xl hover:bg-red-200 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -246,13 +248,13 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+          <div className="text-center py-12 bg-slate-50 rounded-[28px] border-2 border-dashed border-slate-200">
             <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <h5 className="text-lg font-semibold text-slate-900 mb-2">No resumes yet</h5>
             <p className="text-slate-600 mb-4">Create your first professional resume to get started</p>
             <button
               onClick={() => setShowCreateOptions(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-all disabled:opacity-50 text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95"
             >
               Create Your First Resume
             </button>
@@ -279,9 +281,9 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
 
           <button
             onClick={() => navigate("/profile")}
-            className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            className="flex items-center gap-3 p-4 bg-white rounded-[28px] border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
           >
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+            <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
               <Eye className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -292,9 +294,9 @@ export default function ResumeManagementSection({ profileData, onUpdate }: Resum
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            className="flex items-center gap-3 p-4 bg-white rounded-[28px] border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
           >
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+            <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
               <Download className="w-5 h-5 text-purple-600" />
             </div>
             <div>

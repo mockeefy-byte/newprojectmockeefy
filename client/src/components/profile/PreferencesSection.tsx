@@ -83,10 +83,10 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl">
       <div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Job Preferences</h2>
-        <p className="text-[13px] font-medium text-slate-500 mt-1">Set your job preferences and expectations</p>
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Job Preferences</h2>
+        <p className="text-sm font-medium text-slate-500 mt-1">Set your job preferences and expectations</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -99,7 +99,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
             name="experienceLevel"
             value={formData.experienceLevel}
             onChange={handleChange}
-            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 transition-all bg-white"
+            className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white"
           >
             <option value="">Select</option>
             <option value="Fresher">Fresher</option>
@@ -119,7 +119,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
             name="jobType"
             value={formData.jobType}
             onChange={handleChange}
-            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 transition-all bg-white"
+            className="w-full px-3 py-1.5 border border-slate-200 rounded-2xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white"
           >
             <option value="">Select Job Type</option>
             <option value="Full-time">Full-time</option>
@@ -141,7 +141,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
             value={formData.expectedSalary}
             onChange={handleChange}
             disabled={isFresher}
-            className={`w-full px-3 py-1.5 border rounded-lg text-sm focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 transition-all ${
+            className={`w-full px-3 py-1.5 border rounded-2xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all ${
               isFresher ? "border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-slate-200 bg-white"
             }`}
             placeholder="e.g., 80000"
@@ -159,7 +159,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
             value={formData.noticePeriod}
             onChange={handleChange}
             disabled={isFresher}
-            className={`w-full px-3 py-1.5 border rounded-lg text-sm focus:border-[#004fcb] focus:ring-2 focus:ring-[#004fcb]/20 transition-all ${
+            className={`w-full px-3 py-1.5 border rounded-2xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all ${
               isFresher ? "border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-slate-200 bg-white"
             }`}
           >
@@ -189,7 +189,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
       </div>
 
       {/* Additional Info */}
-      <div className="bg-slate-50/80 border border-slate-200 rounded-lg p-4">
+      <div className="bg-slate-50/80 border border-slate-200 rounded-[28px] p-4">
         <h4 className="font-bold text-elite-black text-[11px] mb-2">Why set preferences?</h4>
         <ul className="text-[11px] text-slate-600 space-y-1">
           <li>• Help recruiters find the right opportunities for you</li>
@@ -202,7 +202,7 @@ export default function PreferencesSection({ profileData, onUpdate }: Preference
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-[#004fcb] text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-md shadow-blue-200"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl hover:opacity-95 transition-colors disabled:opacity-50 text-[11px] font-bold shadow-lg shadow-blue-500/20"
         >
           <Save className="w-4 h-4" />
           {saving ? "Saving..." : "Save Changes"}
