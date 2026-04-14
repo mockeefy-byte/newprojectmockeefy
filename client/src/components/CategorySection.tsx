@@ -61,7 +61,7 @@ export const CategorySection = ({ title, profiles, onSeeAll }: CategorySectionPr
     };
 
     return (
-        <section className="w-full max-w-full mb-8 bg-white border border-slate-200/80 rounded-2xl p-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 group/section">
+        <section className="w-full max-w-full mb-8 bg-slate-50/40 border border-slate-200/80 rounded-2xl p-0 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-300 group/section">
             {/* Header - Unified with Card */}
             <div className="flex items-center justify-between px-4 sm:px-5 md:px-6 py-3 border-b border-slate-100 bg-slate-50/10">
                 <div className="flex items-center gap-2.5 min-w-0">

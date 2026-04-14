@@ -19,6 +19,8 @@ export interface User {
     bio?: string;
   };
   role?: string;
+  isPremium?: boolean;
+  freeInterviewsCount?: number;
 }
 
 interface AuthContextType {
@@ -88,50 +90,21 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         phone: userData.personalInfo?.phone || (userData as any).phone || userData.phone,
         profileImage: expertData.photoUrl || userData.profileImage || (userData as any).photoUrl,
         role: userData.userType || (userData as any).role,
+        isPremium: userData.isPremium || (userData as any).isPremium || false,
+        freeInterviewsCount: userData.freeInterviewsCount ?? (userData as any).freeInterviewsCount ?? 0,
       };
 
       setUser(normalizedUser);
       return normalizedUser;
+      setUser(normalizedUser);
+      return normalizedUser;
     } catch (error: any) {
+      console.error('Failed to fetch profile', error);
       const status = error.response?.status;
       if (status === 401 || status === 403) {
-        try {
-          const refreshRes = await axios.get('/api/auth/refresh', { withCredentials: true });
-          const newToken = refreshRes.data?.accessToken;
-          if (newToken) {
-            localStorage.setItem('token', newToken);
-            setToken(newToken);
-            const retry = await axios.get('/api/auth/profile');
-            const userData: User = retry.data.user;
-            let expertData: any = {};
-            if (userData.userType === 'expert') {
-              try {
-                const expertRes = await axios.get('/api/expert/profile');
-                if (expertRes.data?.success) expertData = expertRes.data.profile || {};
-              } catch (_) {}
-            }
-            const normalizedUser: User = {
-              ...userData,
-              id: userData.userId || (userData as any)._id || userData.id,
-              phone: userData.personalInfo?.phone || (userData as any).phone || userData.phone,
-              profileImage: expertData.photoUrl || userData.profileImage || (userData as any).photoUrl,
-              role: userData.userType || (userData as any).role,
-            };
-            setUser(normalizedUser);
-            return normalizedUser;
-          }
-        } catch (refreshErr) {
-          // Refresh failed (no cookie or expired) → clear and require login
-        }
-        localStorage.removeItem('token');
+        // Axios interceptor will handle the refresh and redirect if it fails.
+        // We just need to make sure state is consistent.
         setUser(null);
-        setToken(null);
-        delete axios.defaults.headers.common['Authorization'];
-        if (window.location.pathname !== '/signin' && window.location.pathname !== '/') {
-          window.location.href = '/signin?expired=true';
-        }
-      } else {
-        console.error('Failed to fetch profile', error);
       }
       return null;
     } finally {
@@ -155,6 +128,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         id: userData.userId || userData.id,
         phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
         role: userData.userType || (userData as any).role,
+        isPremium: userData.isPremium ?? false,
+        freeInterviewsCount: userData.freeInterviewsCount ?? 0,
         profileImage: (userData as any).profileImage ?? userData.profileImage,
       };
 
@@ -176,12 +151,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         localStorage.setItem('token', accessToken);
         setToken(accessToken);
 
-        // Normalize userId to id for consistency; keep profileImage for navbar/sidebar
         const normalizedUser: User = {
           ...userData,
           id: userData.userId || userData.id,
           phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
           role: userData.userType || (userData as any).role,
+          isPremium: userData.isPremium ?? false,
+          freeInterviewsCount: userData.freeInterviewsCount ?? 0,
           profileImage: (userData as any).profileImage ?? userData.profileImage,
         };
 
@@ -205,12 +181,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         localStorage.setItem('token', accessToken);
         setToken(accessToken);
 
-        // Normalize userId to id for consistency; keep profileImage for navbar/sidebar
         const normalizedUser: User = {
           ...userData,
           id: userData.userId || userData.id,
           phone: (userData as any).personalInfo?.phone || (userData as any).phone || userData.phone,
           role: userData.userType || (userData as any).role,
+          isPremium: userData.isPremium ?? false,
+          freeInterviewsCount: userData.freeInterviewsCount ?? 0,
           profileImage: (userData as any).profileImage ?? userData.profileImage,
         };
 

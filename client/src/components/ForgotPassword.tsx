@@ -62,9 +62,8 @@ export default function ForgotPassword() {
       const res = await axios.post("/api/auth/verify-otp", { email, otp });
       return res.data;
     },
-    onSuccess: (data: { resetToken?: string }) => {
-      if (data?.resetToken) {
-        setResetToken(data.resetToken);
+    onSuccess: (data: { success: boolean }) => {
+      if (data?.success) {
         setStep(3);
         setError("");
         toast.success("Code verified");
@@ -80,7 +79,8 @@ export default function ForgotPassword() {
   const resetPasswordMutation = useMutation({
     mutationFn: async () => {
       const res = await axios.post("/api/auth/reset-password", {
-        resetToken,
+        email,
+        otp,
         newPassword: password,
       });
       return res.data;

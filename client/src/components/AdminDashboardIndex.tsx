@@ -235,8 +235,8 @@ export default function AdminDashboardIndex() {
                   stats.recentUsers.map((user: any) => (
                     <tr key={user._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs text-blue-600 font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[10px] text-blue-700 font-black uppercase border border-blue-100 shadow-sm shrink-0">
+                          {(user.name || "CA").trim().substring(0, 2).toUpperCase()}
                         </div>
                         {user.name}
                       </td>

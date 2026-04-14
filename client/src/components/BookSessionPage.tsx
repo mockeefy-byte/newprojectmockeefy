@@ -595,6 +595,30 @@ const BookSessionPage = () => {
 
   const currentSlots = getAvailableSlots(selectedDate);
 
+  const handlePremiumCreditBooking = async () => {
+    if (!profile || !selectedSlot) return;
+    
+    const payload = buildFreeBookingPayload();
+    if (!payload) return;
+
+    try {
+      setIsProcessing(true);
+      const res = await axios.post("/api/payment/use-premium-credit", { bookingDetails: payload });
+      if (res.data?.success) {
+        Swal.fire({
+          title: "Booked with Credit!",
+          text: `Session confirmed. You have ${res.data.remainingCredits} credits left.`,
+          icon: "success",
+          confirmButtonColor: "#004fcb",
+        }).then(() => navigate("/my-sessions"));
+      }
+    } catch (err: any) {
+      Swal.fire({ title: "Error", text: err.response?.data?.message || "Failed to book with credit.", icon: "error" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const showPaymentPage = () => {
     if (!profile) return;
     navigate("/payment", {
@@ -616,12 +640,15 @@ const BookSessionPage = () => {
     });
   };
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const buildFreeBookingPayload = () => {
     const dateStr = dates[selectedDate];
     const slot = selectedSlot;
     if (!dateStr || !slot?.time) return null;
     const dateObj = new Date(dateStr);
-    const [startStr] = slot.time.split(" - ");
+    const timeParts = slot.time.split(/\s*[-–]\s*/);
+    const startStr = timeParts[0];
     const [time, period] = startStr.split(" ");
     let [hours, minutes] = time.split(":").map(Number);
     if (period === "PM" && hours !== 12) hours += 12;
@@ -631,7 +658,7 @@ const BookSessionPage = () => {
     const endTimeISO = new Date(dateObj.getTime() + (sessionDuration || 60) * 60000).toISOString();
     return {
       expertId,
-      candidateId: user?.id || user?.userId,
+      candidateId: user?.id || user?.userId || (user as any)?._id,
       startTime: startTimeISO,
       endTime: endTimeISO,
       topics: [selectedSkill],
@@ -775,10 +802,9 @@ const BookSessionPage = () => {
       {/* Profile Info Section — single row: avatar + details + price aligned */}
       <div className="px-5 sm:px-6 pb-6 pt-5">
         <div className="grid grid-cols-1 md:grid-cols-[auto,1fr,auto] gap-5 md:gap-6 items-start">
-          {/* Avatar */}
           <div className="relative shrink-0 -mt-14 md:-mt-16">
             <div className="relative inline-block">
-              {profile.avatar && !/\/mockeefy\.png$/i.test(profile.avatar) && !expertAvatarError ? (
+              {profile.avatar && !profile.avatar.includes("mockeefy.png") && !profile.avatar.includes("default-avatar.png") && !expertAvatarError ? (
                 <img
                   src={profile.avatar}
                   alt={profile.name}
@@ -786,8 +812,8 @@ const BookSessionPage = () => {
                   onError={() => setExpertAvatarError(true)}
                 />
               ) : (
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-slate-100 text-slate-700 flex items-center justify-center text-2xl font-bold shadow-lg shadow-black/5">
-                  {(profile.name || "E").trim().charAt(0).toUpperCase()}
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white bg-blue-100 text-blue-700 flex items-center justify-center text-xl md:text-2xl font-black uppercase shadow-lg shadow-black/5">
+                  {(profile.name || "EX").trim().substring(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
@@ -1125,21 +1151,45 @@ const BookSessionPage = () => {
             if (!selectedSlot) return;
             if (appliedFreePromo) {
               handleFreeBooking();
+            } else if (user?.isPremium && ((user.freeInterviewsCount ?? 0) > 0)) {
+              handlePremiumCreditBooking();
             } else {
+              if (!user) {
+                Swal.fire({
+                  title: "Login Required",
+                  text: "Please sign in to book a session.",
+                  icon: "info",
+                  showCancelButton: true,
+                  confirmButtonText: "Sign In",
+                  confirmButtonColor: "#004fcb",
+                }).then((res) => {
+                  if (res.isConfirmed) navigate("/signin");
+                });
+                return;
+              }
               showPaymentPage();
             }
           }}
-          disabled={!selectedSlot}
+          disabled={!selectedSlot || isProcessing}
           className={`w-full py-3.5 rounded-2xl font-extrabold transition-all flex items-center justify-center gap-2 group ${selectedSlot
             ? appliedFreePromo
               ? "bg-green-600 text-white hover:bg-green-700 shadow-md shadow-green-900/10 active:scale-[0.99]"
-              : "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md shadow-blue-900/10 active:scale-[0.99]"
+              : user?.isPremium && ((user.freeInterviewsCount ?? 0) > 0)
+                ? "bg-[#004fcb] text-white hover:bg-blue-700 shadow-md shadow-blue-900/10 active:scale-[0.99]"
+                : "bg-[#004fcb] text-white hover:bg-[#003bb5] shadow-md shadow-blue-900/10 active:scale-[0.99]"
             : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
         >
-          {selectedSlot ? (
+          {isProcessing ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : selectedSlot ? (
             <>
-              {appliedFreePromo ? "Confirm free booking" : "Confirm & Book"}
+              {appliedFreePromo 
+                ? "Confirm free booking" 
+                : user?.isPremium && ((user.freeInterviewsCount ?? 0) > 0)
+                  ? `Book with Credit (${user.freeInterviewsCount} left)`
+                  : "Confirm & Book"
+              }
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </>
           ) : (

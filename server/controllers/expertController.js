@@ -145,12 +145,15 @@ const computeCompletion = (expert, user) => {
   const weeklyHasSlots = Object.values(weeklyObj || {}).some(arr => Array.isArray(arr) && arr.length > 0);
   if (weeklyHasSlots) score += 15;
 
-  // Profile Photo (5%) - From User
-  if (user?.profileImage) score += 5;
+  // Profile Photo (5%) - Check both User (source of truth) and Expert (legacy)
+  const hasPhoto = user?.profileImage || expert.profileImage;
+  if (hasPhoto && !hasPhoto.includes('default-avatar.png')) score += 5;
 
   // Verification (10%) - From Expert
   const v = expert.verification || {};
-  if (v.companyId?.url && v.aadhar?.url && v.linkedin) score += 10;
+  // Be slightly more flexible: handle cases where verification exists as an empty-ish object
+  const verificationFilled = (v.companyId?.url || v.aadhar?.url) && v.linkedin;
+  if (verificationFilled) score += 10;
 
   return Math.min(score, 100);
 };

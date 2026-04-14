@@ -74,125 +74,124 @@ export const MentorJobCard = ({ mentor }: { mentor: MentorProfile }) => {
         <div
             onClick={handleCardClick}
             className="
-                group relative bg-white rounded-[24px] border border-gray-100/80
+                group relative bg-gradient-to-br from-white via-white to-blue-50/30 
+                rounded-[24px] border border-slate-200/60
                 w-full min-w-0 h-full flex flex-col p-6
-                transition-all duration-300 ease-out hover:-translate-y-1
-                hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-blue-100/50
+                transition-all duration-300 ease-out hover:-translate-y-2
+                hover:shadow-[0_20px_50px_rgba(0,79,203,0.1)] hover:border-blue-400/30
                 cursor-pointer snap-start overflow-hidden
             "
         >
+            {/* Animated Glow Background */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+
             {/* Header: Title & Time & Avatar */}
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-5 relative z-10">
                 <div className="flex-1 min-w-0 pr-4">
-                    <h3 className="font-bold text-[18px] text-gray-900 tracking-tight leading-7 truncate">
+                    <h3 className="font-black text-[19px] text-slate-900 tracking-tight leading-tight truncate group-hover:text-blue-700 transition-colors">
                         {mentor.name}
                     </h3>
-                    <span className="text-[13px] text-gray-400 font-medium flex items-center gap-1.5 mt-1">
-                        <Clock size={14} /> 12h ago
-                    </span>
-                    <p className="text-[15px] font-medium text-gray-600 tracking-tight line-clamp-2 break-words mt-4">
-                        {mentor.role}{mentor.company ? ` at ${mentor.company}` : ""}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                        <Clock size={12} className="text-slate-400" />
+                        <span className="text-[12px] text-slate-400 font-bold uppercase tracking-wider">{mentor.activeTime?.replace(' ago', '') || "Active"}</span>
+                    </div>
                 </div>
-                <div className="flex flex-col items-end gap-3 shrink-0">
+                
+                <div className="shrink-0 flex items-center gap-3">
                     <button
                         onClick={toggleSave}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border ${isSaved ? 'bg-blue-50 text-[#004fcb] border-blue-100' : 'bg-white text-gray-300 border-gray-100 hover:bg-gray-50 hover:text-gray-500'}`}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all border ${isSaved ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-300 border-slate-200 hover:border-blue-200 hover:text-blue-600'}`}
                     >
-                        <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
+                        <Bookmark size={16} className={isSaved ? "fill-current" : ""} />
                     </button>
-                    {(mentor.avatar && mentor.avatar !== "/default-avatar.png") ? (
-                        <div className="w-10 h-10 rounded-full overflow-hidden shadow-sm bg-gray-50 object-cover shrink-0">
-                            <img
-                                src={mentor.avatar}
-                                className="w-full h-full object-cover"
-                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
+                    
+                        <div className="relative">
+                            {(mentor.avatar && !mentor.avatar.includes("default-avatar.png")) ? (
+                                <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-sm border-2 border-white ring-1 ring-slate-100 shrink-0">
+                                    <img
+                                        src={mentor.avatar}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 text-blue-700 font-black text-lg border-2 border-white ring-1 ring-slate-100 shrink-0 uppercase">
+                                    {mentor.name.substring(0, 2)}
+                                </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-sm ring-1 ring-emerald-100"></div>
                         </div>
-                    ) : (
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-50 border border-blue-100/50 text-[#004fcb] shrink-0">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                        </div>
-                    )}
                 </div>
             </div>
 
+            {/* Info Row: Role & Company */}
+            <div className="mb-5 relative z-10">
+                <p className="text-[14px] font-bold text-slate-700 tracking-tight leading-snug line-clamp-2">
+                    {mentor.role}{mentor.company ? <span className="text-slate-400 font-medium"> at </span> : ""}{mentor.company}
+                </p>
+            </div>
+
             {/* Badges: Rating & Category */}
-            <div className="flex items-center gap-2.5 mb-6 mt-1">
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50/40 border border-amber-100/50">
+            <div className="flex items-center gap-2 mb-6 mt-1 relative z-10">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/50">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span className="text-[12px] font-bold text-gray-800">{mentor.rating > 0 ? mentor.rating.toFixed(1) : "New"}</span>
+                    <span className="text-[12px] font-black text-amber-900">{mentor.rating > 0 ? mentor.rating.toFixed(1) : "New"}</span>
                     {mentor.reviews > 0 && (
-                        <span className="text-[10px] font-bold text-gray-500 ml-0.5">({mentor.reviews} Reviews)</span>
+                        <span className="text-[10px] font-bold text-amber-600/60 ml-0.5">({mentor.reviews})</span>
                     )}
                 </div>
-                <div className="px-4 py-1 rounded-full bg-gray-50/80 border border-gray-100 text-[12px] font-bold text-gray-600">
+                <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/50 text-[11px] font-black text-slate-500 uppercase tracking-widest">
                     {mentor.category || "IT"}
                 </div>
             </div>
 
-            {/* Icon-based Meta Row */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-6">
-                <div className="flex items-center gap-2 text-gray-400">
-                    <Briefcase size={16} strokeWidth={2} />
-                    <span className="text-[13px] font-medium text-gray-600">
-                        {mentor.experience}
-                    </span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-400">
-                    <MapPin size={16} strokeWidth={2} />
-                    <span className="text-[13px] font-medium text-gray-600">
-                        {mentor.location || "Global"}
-                    </span>
-                </div>
-            </div>
-
-            {/* Availability Detail */}
-            <div className="flex items-center mb-6">
-                <div className="px-3 py-1.5 rounded-full bg-emerald-50/80 flex items-center gap-2 w-fit">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
-                        {mentor.activeTime?.toUpperCase() || "AVAILABLE TODAY"}
-                    </span>
-                </div>
-            </div>
-
-            {/* Skills Section */}
-            <div className="mb-6 flex-1">
-                {mentor.skills && mentor.skills.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                        {mentor.skills.slice(0, 4).map((skill, index) => (
-                            <span key={index} className="px-3 py-1.5 bg-gray-50 rounded-lg text-[11px] font-medium text-gray-500 transition-colors">
-                                {skill}
-                            </span>
-                        ))}
-                        {mentor.skills.length > 4 && (
-                            <span className="text-[11px] font-semibold text-blue-400 hover:text-blue-600 cursor-pointer pl-1 mt-1">
-                                +{mentor.skills.length - 4} more
-                            </span>
-                        )}
-                    </div>
-                ) : (
-                    <div className="h-[20px]"></div>
-                )}
-            </div>
-
-            {/* Footer Section: Price & Action */}
-            <div className="mt-auto flex items-end justify-between pt-1">
-                <div>
-                    <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Session Fee</p>
-                    <div className="flex items-end gap-0.5">
-                        <span className="text-[26px] font-extrabold text-gray-900 leading-none tracking-tight">
-                            {mentor.price || "₹—"}
-                        </span>
+            {/* Meta Stats: Experience & Sessions */}
+            <div className="grid grid-cols-2 gap-3 mb-6 relative z-10">
+                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-slate-50/50 border border-slate-100">
+                    <Briefcase size={14} className="text-slate-400" />
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Exp.</p>
+                        <p className="text-[12px] font-bold text-slate-700 truncate leading-none">{mentor.experience}</p>
                     </div>
                 </div>
-                <button
-                    onClick={handleBookNow}
-                    className="px-5 py-2.5 bg-blue-50/80 hover:bg-blue-100 text-[#004fcb] rounded-xl text-[13px] font-bold tracking-tight transition-all active:scale-95 flex items-center gap-1.5"
-                >
-                    Book Now <ChevronRight size={14} strokeWidth={3} />
-                </button>
+                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-slate-50/50 border border-slate-100">
+                    <MapPin size={14} className="text-slate-400" />
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Loc.</p>
+                        <p className="text-[12px] font-bold text-slate-700 truncate leading-none">{mentor.location || "Global"}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Availability Strip */}
+            <div className="mb-6 relative z-10">
+                <div className="px-3 py-2 rounded-xl bg-emerald-50/60 border border-emerald-100 flex items-center justify-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                        Ready to Join • {mentor.activeTime?.toUpperCase().replace(' AGO', '') || "NOW"}
+                    </span>
+                </div>
+            </div>
+
+            {/* Price & Action Section */}
+            <div className="mt-auto pt-5 border-t border-slate-100/50 relative z-10">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Starting From</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-[24px] font-black text-slate-900 leading-none tracking-tight">
+                                {mentor.price || "₹99"}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">/ session</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleBookNow}
+                        className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[14px] font-bold tracking-tight shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                    >
+                        Book <ChevronRight size={16} strokeWidth={3} />
+                    </button>
+                </div>
             </div>
         </div>
     );

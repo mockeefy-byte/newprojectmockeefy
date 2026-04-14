@@ -70,7 +70,7 @@ export function PricingSection({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex flex-wrap justify-center gap-6">
         {tiers.map((tier) => {
           const price = tier.price[frequency];
           const isCustom =
@@ -81,7 +81,7 @@ export function PricingSection({
             <div
               key={tier.id}
               className={cn(
-                "relative rounded-2xl border-2 bg-white p-6 flex flex-col transition-all",
+                "relative rounded-2xl border-2 bg-white p-6 flex flex-col transition-all max-w-sm w-full",
                 tier.popular || tier.highlighted
                   ? "border-[#004fcb] shadow-lg shadow-blue-900/10"
                   : "border-slate-200 hover:border-slate-300"

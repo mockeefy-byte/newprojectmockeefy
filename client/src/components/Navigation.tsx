@@ -17,7 +17,8 @@ import {
   Bot,
   Sparkles,
   Bookmark,
-  Award
+  Award,
+  Crown
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getProfileImageUrl } from "../lib/imageUtils";
@@ -316,7 +317,13 @@ const Navigation = () => {
                       <p className="text-sm font-semibold text-slate-900 leading-none tracking-tight">
                         {user.name?.split(" ")[0] || "User"}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1">Member</p>
+                      {user.isPremium ? (
+                        <div className="flex items-center justify-end mt-1 gap-1 text-[11px] font-bold text-[#004fcb]">
+                          <Crown size={10} /> Premium
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 mt-1">Member</p>
+                      )}
                     </div>
                     <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden ring-2 ring-transparent group-hover:ring-blue-100/50 transition-all">
                       <Avatar name={user?.name} src={profileImage} className="w-full h-full" />
@@ -331,7 +338,12 @@ const Navigation = () => {
                           <Avatar name={user?.name} src={profileImage} className="w-full h-full" />
                         </div>
                         <div className="overflow-hidden">
-                          <p className="font-semibold text-slate-900 text-sm truncate tracking-tight">{user.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-slate-900 text-sm truncate tracking-tight">{user.name}</p>
+                            {user.isPremium && (
+                              <Crown size={12} className="text-[#004fcb] shrink-0 fill-current opacity-80" />
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 truncate mt-0.5 tracking-tighter">{user.email}</p>
                         </div>
                       </div>

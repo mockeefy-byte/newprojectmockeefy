@@ -224,9 +224,14 @@ const PendingExpertsTable: React.FC = () => {
                             currentExperts.map((exp) => (
                                 <tr key={exp._id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <div>
-                                            <p className="font-medium text-gray-900">{exp.personalInformation.userName}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5">{exp.professionalDetails.title}</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs uppercase shrink-0">
+                                                {(exp.personalInformation?.userName || "EX").substring(0, 2)}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-900">{exp.personalInformation.userName}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">{exp.professionalDetails.title}</p>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

@@ -210,21 +210,18 @@ const ExpertProfileHeader = memo(({ onRefresh }: { onNavigate?: (tab: string) =>
           {/* Moving status badge to top-right of container was previous design, sticking to cleaner centered layout */}
 
           <ProgressRing percent={completion}>
-            {profile.photoUrl ? (
+            {(profile.photoUrl && !profile.photoUrl.includes("default-avatar.png") && !profile.photoUrl.includes("ui-avatars.com")) ? (
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-sm">
                 <img
                   src={profile.photoUrl}
                   alt="Profile"
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=3b82f6&color=fff&size=96`;
-                  }}
                 />
               </div>
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gray-50 border-4 border-white flex items-center justify-center shadow-sm">
-                <span className="text-3xl font-semibold text-gray-300">
-                  {(profile.name || user?.name || 'U').charAt(0).toUpperCase()}
+              <div className="w-24 h-24 rounded-full bg-blue-100 border-4 border-white flex items-center justify-center shadow-sm">
+                <span className="text-3xl font-black text-blue-700 uppercase">
+                  {(profile.name || user?.name || 'ME').trim().substring(0, 2).toUpperCase()}
                 </span>
               </div>
             )}
@@ -275,19 +272,30 @@ const ExpertProfileHeader = memo(({ onRefresh }: { onNavigate?: (tab: string) =>
           <div className="mt-4 flex flex-col gap-2">
             <div className="flex justify-between items-center text-xs text-gray-500 font-medium uppercase tracking-wider">
               <span>Profile Completion</span>
-              <span className="text-blue-600">{completion}%</span>
+              <span className="text-blue-600">
+                {loading ? "..." : `${completion}%`}
+              </span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-full">
-              <div
-                className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${completion}%` }}
-              />
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-full relative">
+              {loading ? (
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
+              ) : (
+                <div
+                  className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${completion}%` }}
+                />
+              )}
             </div>
           </div>
         </div>
 
         {/* Action Required Section */}
-        {completion < 100 && (
+        {loading ? (
+          <div className="w-full max-w-md bg-gray-50 rounded-xl border border-gray-100 p-8 flex flex-col items-center">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Checking Profile Status...</p>
+          </div>
+        ) : completion < 100 && (
           <div className="w-full max-w-md bg-amber-50/50 rounded-xl border border-amber-100 p-4 md:p-6 mb-2">
             {profile.status === "rejected" ? (
               <div className="text-center">

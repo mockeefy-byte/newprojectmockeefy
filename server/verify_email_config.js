@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { sendEmail } from "./services/emailService.js";
 
 console.log("Starting Email Verification Script...");

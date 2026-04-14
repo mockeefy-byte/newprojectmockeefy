@@ -29,7 +29,7 @@ type SideNavProps = {
 };
 
 export default function SideNav({ isOpen = false, onClose, className = "" }: SideNavProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = () => {
@@ -137,19 +137,44 @@ export default function SideNav({ isOpen = false, onClose, className = "" }: Sid
 
       {/* Bottom Actions Section */}
       <div className="p-5 border-t border-slate-100 bg-slate-50/50 shrink-0">
-        {/* Pro Upgrade Card */}
-        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-100/50 rounded-2xl p-4 mb-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
-            <Sparkles className="w-12 h-12 text-blue-600" />
+        {/* Premium Upgrade / Status Card */}
+        {user?.userType === 'candidate' && (
+          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-100/50 rounded-2xl p-4 mb-4 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+              <Sparkles className="w-12 h-12 text-[#004fcb]" />
+            </div>
+            <div className="relative z-10">
+              {user?.isPremium ? (
+                <>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="bg-[#004fcb] text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Premium</div>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 mb-1">Free Sessions Left</h4>
+                  <div className="flex items-end gap-1.5 mb-2">
+                    <span className="text-2xl font-black text-[#004fcb]">{user?.freeInterviewsCount || 0}</span>
+                    <span className="text-[10px] text-slate-500 font-bold mb-1 uppercase">/ 3 Remaining</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-medium leading-tight mb-0">Use these credits to book any expert for free.</p>
+                </>
+              ) : (
+                <>
+                  <h4 className="text-sm font-bold text-slate-900 mb-1">Go Premium</h4>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-xs font-black text-[#004fcb]">₹499</span>
+                    <span className="text-[10px] text-slate-500 font-medium">/ Lifetime</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mb-4 leading-relaxed">Get 3 free interviews & premium certification.</p>
+                  <button 
+                    onClick={() => navigate('/payment', { state: { upgradeType: 'premium' } })}
+                    className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-[#004fcb] transition-colors shadow-md"
+                  >
+                    Upgrade Now
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-          <div className="relative z-10">
-            <h4 className="text-sm font-bold text-slate-900 mb-1">Upgrade to Expert+</h4>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed max-w-[160px]">Unlock priority matching & premium support.</p>
-            <button className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg">
-              Upgrade Now
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Sign Out */}
         <button onClick={handleSignOut} className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:text-red-600 w-full rounded-xl hover:bg-red-50 transition-colors">

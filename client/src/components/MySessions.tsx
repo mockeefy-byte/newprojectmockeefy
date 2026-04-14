@@ -76,12 +76,12 @@ function SessionAvatar({
   className?: string;
 }) {
   const [imageError, setImageError] = useState(false);
-  const initial = (name || "E").trim().charAt(0).toUpperCase();
-  const shouldShowLetter = !profileImage || imageError;
+  const initial = (name || "E").trim().substring(0, 2).toUpperCase();
+  const shouldShowLetter = !profileImage || profileImage.includes('default-avatar.png') || imageError;
 
   if (shouldShowLetter) {
     return (
-      <div className={`w-full h-full rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold ${className || ""}`}>
+      <div className={`w-full h-full rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-black uppercase text-[10px] ${className || ""}`}>
         {initial}
       </div>
     );
@@ -699,7 +699,7 @@ const MySessions = ({ initialViewOverride }: { initialViewOverride?: 'overview' 
                           <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-50">
                             <div>
                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Session Fee</p>
-                              <span className="font-black text-[16px] text-elite-black">{expert.price || "₹499"}</span>
+                              <span className="font-black text-[16px] text-elite-black">{expert.price || "₹99"}</span>
                             </div>
                             <button onClick={() => navigate('/book-session', { state: { expertId: expert.expertID, profile: expert } })} className="px-4 py-2 bg-elite-blue text-white rounded-lg text-[10px] font-black hover:bg-blue-600 transition-all">Book Now</button>
                           </div>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Calendar, Clock, Video, ShieldCheck, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle, Calendar, Clock, Video, ShieldCheck, Zap, Sparkles, CreditCard, Smartphone, Landmark } from "lucide-react";
 import axios from '../lib/axios';
 import { useAuth } from "../context/AuthContext";
 
@@ -14,8 +14,9 @@ declare global {
 const PaymentPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, fetchProfile } = useAuth();
   const bookingDetails = location.state?.bookingDetails;
+  const upgradeType = location.state?.upgradeType;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
@@ -34,7 +35,8 @@ const PaymentPage: React.FC = () => {
     return 0;
   };
 
-  const basePrice = bookingDetails ? parsePrice(bookingDetails.price) : 0;
+  // Set base price to 1 INR for premium upgrade testing
+  const basePrice = upgradeType === 'premium' ? 1 : (bookingDetails ? parsePrice(bookingDetails.price) : 0);
 
   const gstAmount = Math.floor(basePrice * 0.18);
   const discountAmount = appliedFreePromo
@@ -44,12 +46,12 @@ const PaymentPage: React.FC = () => {
       : 0;
 
   const orderSummary = {
-    productName: bookingDetails
-      ? `${bookingDetails.skill || bookingDetails.category} Mock Interview`
-      : "Premium Subscription",
-    plan: bookingDetails
-      ? `${bookingDetails.duration} Min Session with ${bookingDetails.expertName}`
-      : "Annual Plan",
+    productName: upgradeType === 'premium' 
+      ? "Premium Membership" 
+      : (bookingDetails ? `${bookingDetails.skill || bookingDetails.category} Mock Interview` : "Premium Subscription"),
+    plan: upgradeType === 'premium'
+      ? "LIFETIME - 3 Free Interviews"
+      : (bookingDetails ? `${bookingDetails.duration} Min Session with ${bookingDetails.expertName}` : "Annual Plan"),
     basePrice: basePrice,
     discount: discountAmount,
     gst: gstAmount,
@@ -77,7 +79,8 @@ const PaymentPage: React.FC = () => {
 
       if (bookingDetails?.date && bookingDetails?.slot?.time) {
         const dateObj = new Date(bookingDetails.date);
-        const [startStr] = bookingDetails.slot.time.split(" - ");
+        const timeParts = bookingDetails.slot.time.split(/\s*[-–]\s*/);
+        const startStr = timeParts[0];
         const [time, period] = startStr.split(" ");
         let [hours, minutes] = time.split(":").map(Number);
         if (period === "PM" && hours !== 12) hours += 12;
@@ -92,7 +95,8 @@ const PaymentPage: React.FC = () => {
         razorpay_order_id: response.razorpay_order_id,
         razorpay_payment_id: response.razorpay_payment_id,
         razorpay_signature: response.razorpay_signature,
-        bookingDetails: {
+        paymentType: upgradeType === 'premium' ? 'subscription' : 'booking',
+        bookingDetails: upgradeType === 'premium' ? null : {
           expertId: bookingDetails?.expertId,
           candidateId: user?.id || user?.userId,
           startTime: startTimeISO,
@@ -107,6 +111,7 @@ const PaymentPage: React.FC = () => {
       });
 
       if (verifyResponse.data.success) {
+        await fetchProfile(); // Refresh user state (isPremium, credits)
         setPaymentStatus("success");
         setTransactionId(response.razorpay_payment_id);
         setShowSuccessModal(true);
@@ -197,7 +202,8 @@ const PaymentPage: React.FC = () => {
     let endTimeISO = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     if (bookingDetails?.date && bookingDetails?.slot?.time) {
       const dateObj = new Date(bookingDetails.date);
-      const [startStr] = bookingDetails.slot.time.split(" - ");
+      const timeParts = bookingDetails.slot.time.split(/\s*[-–]\s*/);
+      const startStr = timeParts[0];
       const [time, period] = startStr.split(" ");
       let [hours, minutes] = time.split(":").map(Number);
       if (period === "PM" && hours !== 12) hours += 12;
@@ -209,7 +215,7 @@ const PaymentPage: React.FC = () => {
     }
     return {
       expertId: bookingDetails?.expertId,
-      candidateId: user?.id || user?.userId,
+      candidateId: user?.id || user?.userId || (user as any)?._id,
       startTime: startTimeISO,
       endTime: endTimeISO,
       topics: Array.isArray(bookingDetails?.topics) && bookingDetails.topics.length
@@ -226,21 +232,36 @@ const PaymentPage: React.FC = () => {
     if (orderSummary.total > 0) return;
     setIsProcessing(true);
     try {
-      const payload = buildBookingPayload();
-      const res = await axios.post("/api/payment/create-free-booking", {
-        bookingDetails: payload,
-      });
-      if (res.data?.success) {
-        setPaymentStatus("success");
-        setTransactionId(res.data.sessionId || "FREE");
-        setShowSuccessModal(true);
+      if (upgradeType === 'premium') {
+        const res = await axios.post("/api/payment/create-free-subscription", {
+          userId: user?.id || user?.userId || (user as any)?._id
+        });
+        if (res.data?.success) {
+          if (fetchProfile) await fetchProfile();
+          setPaymentStatus("success");
+          setTransactionId("FREE-PREMIUM-" + Date.now());
+          setShowSuccessModal(true);
+        } else {
+          throw new Error(res.data?.message || "Free subscription failed");
+        }
       } else {
-        throw new Error(res.data?.message || "Free booking failed");
+        const payload = buildBookingPayload();
+        const res = await axios.post("/api/payment/create-free-booking", {
+          bookingDetails: payload,
+        });
+        if (res.data?.success) {
+          setPaymentStatus("success");
+          setTransactionId(res.data.sessionId || "FREE");
+          setShowSuccessModal(true);
+        } else {
+          throw new Error(res.data?.message || "Free booking failed");
+        }
       }
     } catch (err: any) {
       setPaymentStatus("error");
-      setErrors({ submit: err.message || "Failed to confirm free booking." });
-      Swal.fire({ title: "Error", text: err.message || "Failed to confirm free booking.", icon: "error" });
+      const errorMessage = err.response?.data?.message || err.message || "Failed to confirm free transaction.";
+      setErrors({ submit: errorMessage });
+      Swal.fire({ title: "Error", text: errorMessage, icon: "error" });
     } finally {
       setIsProcessing(false);
     }
@@ -310,10 +331,19 @@ const PaymentPage: React.FC = () => {
                   </button>
                 )}
 
-                <div className="flex justify-center items-center space-x-6 pt-4 border-t border-gray-50">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UPI-Logo.png/800px-UPI-Logo.png" alt="UPI" className="h-4 grayscale hover:grayscale-0 transition-opacity opacity-60" />
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" alt="Visa" className="h-3 grayscale hover:grayscale-0 transition-opacity opacity-60" />
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" alt="MC" className="h-5 grayscale hover:grayscale-0 transition-opacity opacity-60" />
+                <div className="flex justify-center items-center space-x-6 pt-6 border-t border-gray-50 text-gray-400">
+                  <div className="flex flex-col items-center gap-1.5 opacity-70 hover:opacity-100 hover:text-[#004fcb] transition-all cursor-default">
+                    <Smartphone className="w-5 h-5 shrink-0" strokeWidth={2} />
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest">UPI</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5 opacity-70 hover:opacity-100 hover:text-[#004fcb] transition-all cursor-default">
+                    <CreditCard className="w-5 h-5 shrink-0" strokeWidth={2} />
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest">Cards</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5 opacity-70 hover:opacity-100 hover:text-[#004fcb] transition-all cursor-default">
+                    <Landmark className="w-5 h-5 shrink-0" strokeWidth={2} />
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest">Banking</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -343,29 +373,64 @@ const PaymentPage: React.FC = () => {
 
           {/* Detailed Summary Section */}
           <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-gray-900/5 border border-gray-100 h-fit sticky top-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">Booking Details</h3>
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center p-4 bg-gray-50 rounded-2xl">
-                <Video className="w-10 h-10 text-blue-600 p-2 bg-blue-100 rounded-xl mr-4" />
-                <div>
-                  <p className="text-sm font-bold text-gray-900">{orderSummary.productName}</p>
-                  <p className="text-xs text-gray-500">{bookingDetails?.expertName || "Expert Session"}</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-6">
+              {upgradeType === 'premium' ? "Plan Details" : "Booking Details"}
+            </h3>
+            
+            {upgradeType === 'premium' ? (
+              <div className="space-y-4 mb-8">
+                <div className="flex flex-col p-5 bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 rounded-2xl relative overflow-hidden">
+                  <Sparkles className="w-24 h-24 text-blue-500/10 absolute -right-6 -bottom-6" />
+                  <div className="flex items-center gap-3 mb-3 relative z-10">
+                    <div className="w-10 h-10 bg-[#004fcb] rounded-xl flex items-center justify-center shadow-sm">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-gray-900 font-bold leading-tight">Lifetime Membership</h4>
+                      <p className="text-[10px] uppercase font-bold text-[#004fcb] tracking-wider">Premium Access</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed mb-4 relative z-10">Unlock all Mockeefy advanced features and fast-track your interview preparation with priority options.</p>
+                  <ul className="space-y-2.5 relative z-10">
+                    <li className="flex items-start text-xs text-gray-700 font-medium">
+                      <CheckCircle className="w-4 h-4 text-[#004fcb] mr-2 shrink-0" /> 
+                      <span><strong>3 Free Integrations</strong> — Use to book any Mock Interview session for free.</span>
+                    </li>
+                    <li className="flex items-start text-xs text-gray-700 font-medium">
+                      <CheckCircle className="w-4 h-4 text-[#004fcb] mr-2 shrink-0" /> 
+                      <span><strong>Verified Certificates</strong> — Share authentic interview badges directly to your LinkedIn.</span>
+                    </li>
+                    <li className="flex items-start text-xs text-gray-700 font-medium">
+                      <CheckCircle className="w-4 h-4 text-[#004fcb] mr-2 shrink-0" /> 
+                      <span><strong>Priority Matching</strong> — Get matched with top 1% industry experts faster.</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center p-4 bg-gray-50 rounded-2xl">
+                  <Video className="w-10 h-10 text-blue-600 p-2 bg-blue-100 rounded-xl mr-4" />
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{orderSummary.productName}</p>
+                    <p className="text-xs text-gray-500">{bookingDetails?.expertName || "Expert Session"}</p>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <Calendar className="w-4 h-4 text-gray-400 mb-1" />
-                  <p className="text-xs text-gray-500">Date</p>
-                  <p className="text-sm font-bold text-gray-900">{bookingDetails?.date ? new Date(bookingDetails.date).toLocaleDateString() : "TBD"}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <Clock className="w-4 h-4 text-gray-400 mb-1" />
-                  <p className="text-xs text-gray-500">Time</p>
-                  <p className="text-sm font-bold text-gray-900">{bookingDetails?.slot?.time || "TBD"}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-2xl">
+                    <Calendar className="w-4 h-4 text-gray-400 mb-1" />
+                    <p className="text-xs text-gray-500">Date</p>
+                    <p className="text-sm font-bold text-gray-900">{bookingDetails?.date ? new Date(bookingDetails.date).toLocaleDateString() : "TBD"}</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-2xl">
+                    <Clock className="w-4 h-4 text-gray-400 mb-1" />
+                    <p className="text-xs text-gray-500">Time</p>
+                    <p className="text-sm font-bold text-gray-900">{bookingDetails?.slot?.time || "TBD"}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-3 pt-6 border-t border-gray-100">
               <div className="flex justify-between text-gray-500 text-sm">
@@ -398,9 +463,13 @@ const PaymentPage: React.FC = () => {
             <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8">
               <CheckCircle className="w-12 h-12 text-green-600" />
             </div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2">Booking Success!</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-2">
+              {upgradeType === 'premium' ? "Welcome to Premium!" : "Booking Success!"}
+            </h2>
             <p className="text-gray-500 mb-2 leading-relaxed">
-              Your session has been successfully scheduled. Check your email for details.
+              {upgradeType === 'premium' 
+                ? "Your Mockeefy Premium Membership is now active. You have 3 credits to book sessions for free!" 
+                : "Your session has been successfully scheduled. Check your email for details."}
             </p>
             {transactionId && (
               <p className="text-xs text-gray-400 mb-8 font-mono">
@@ -408,17 +477,19 @@ const PaymentPage: React.FC = () => {
               </p>
             )}
             <div className="w-full space-y-3">
+              {upgradeType !== 'premium' && (
+                <button
+                  onClick={() => navigate("/my-sessions")}
+                  className="w-full bg-[#004fcb] text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  Go to My Sessions
+                </button>
+              )}
               <button
-                onClick={() => navigate("/my-sessions")}
-                className="w-full bg-[#004fcb] text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                onClick={() => navigate(upgradeType === 'premium' ? "/dashboard" : "/")}
+                className="w-full bg-[#004fcb] text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 md:bg-gray-50 md:text-gray-600 md:shadow-none"
               >
-                Go to My Sessions
-              </button>
-              <button
-                onClick={() => navigate("/")}
-                className="w-full bg-gray-50 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-colors"
-              >
-                Close
+                {upgradeType === 'premium' ? "Go to Dashboard" : "Close"}
               </button>
             </div>
           </div>

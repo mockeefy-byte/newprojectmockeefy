@@ -45,6 +45,7 @@ export const createOrder = async (req, res) => {
 
 import * as sessionService from '../services/sessionService.js';
 import ExpertDetails from '../models/expertModel.js';
+import User from '../models/User.js';
 
 export const verifyPayment = async (req, res) => {
     try {
@@ -64,12 +65,29 @@ export const verifyPayment = async (req, res) => {
         }
 
         if (isVerified) {
-            // Create Session Context
+            // Handle Subscription Type
+            if (req.body.paymentType === 'subscription') {
+                const updatedUser = await User.findByIdAndUpdate(
+                    user?.id || user?.userId,
+                    {
+                        isPremium: true,
+                        freeInterviewsCount: 3,
+                        premiumExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+                    },
+                    { new: true }
+                );
+                return res.status(200).json({
+                    success: true,
+                    message: 'Subscription successful! You are now a Premium Member.',
+                    user: updatedUser
+                });
+            }
+
+            // Create Session Context (Regular Payment)
             if (bookingDetails) {
                 const startTime = new Date(bookingDetails.startTime);
                 const endTime = new Date(bookingDetails.endTime);
 
-                // Generate a Session ID similar to sessionController
                 const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                 const sessionData = {
@@ -80,7 +98,7 @@ export const verifyPayment = async (req, res) => {
                     endTime,
                     topics: bookingDetails.topics || ["General Mock Interview"],
                     price: bookingDetails.price,
-                    status: 'confirmed', // Paid = Confirmed
+                    status: 'confirmed',
                     duration: bookingDetails.duration || 60,
                     notes: bookingDetails.notes || ""
                 };
@@ -116,6 +134,67 @@ export const verifyPayment = async (req, res) => {
             success: false,
             message: 'Failed to verify payment',
             error: error.message,
+        });
+    }
+};
+
+/**
+ * Premium members booking with their free credits.
+ */
+export const usePremiumCredit = async (req, res) => {
+    try {
+        const { bookingDetails } = req.body;
+        const userId = bookingDetails.candidateId;
+
+        const user = await User.findById(userId);
+        if (!user || !user.isPremium || user.freeInterviewsCount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Insufficient free credits or not a premium member.'
+            });
+        }
+
+        // Decrement credit
+        user.freeInterviewsCount -= 1;
+        await user.save();
+
+        const startTime = new Date(bookingDetails.startTime);
+        const endTime = new Date(bookingDetails.endTime);
+        const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const sessionData = {
+            sessionId,
+            expertId: bookingDetails.expertId,
+            candidateId: bookingDetails.candidateId,
+            startTime,
+            endTime,
+            topics: Array.isArray(bookingDetails.topics) ? bookingDetails.topics : ["Mock Interview"],
+            price: 0,
+            status: 'confirmed',
+            duration: bookingDetails.duration || 60,
+            notes: "Premium Free Credit Used",
+        };
+
+        try {
+            const expert = await ExpertDetails.findOne({ $or: [{ _id: bookingDetails.expertId }, { userId: bookingDetails.expertId }] });
+            sessionData.meetingLink = expert?.availability?.defaultMeetingLink || null;
+        } catch (_) {}
+
+        const session = await sessionService.createSession(sessionData);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Session booked successfully using premium credit!',
+            data: session,
+            sessionId: session.sessionId,
+            remainingCredits: user.freeInterviewsCount
+        });
+    } catch (error) {
+        console.error('Use Premium Credit Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to book session with credit',
+            error: error.message
         });
     }
 };
@@ -173,6 +252,41 @@ export const createFreeBooking = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to create free booking',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Handle 100% free premium subscriptions (e.g. 100% promo codes).
+ */
+export const createFreeSubscription = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'User ID is required' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                isPremium: true,
+                freeInterviewsCount: 3,
+                premiumExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+            },
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Free Premium Subscription Activated!',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Create Free Subscription Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create free subscription',
             error: error.message,
         });
     }

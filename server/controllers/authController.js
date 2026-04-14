@@ -80,7 +80,7 @@ export const verifyGoogleToken = async (req, res) => {
           userId: existingUser._id
         },
         JWT_SECRET,
-        { expiresIn: "15m" }
+        { expiresIn: "7d" }
       );
 
       const refreshToken = jwt.sign(
@@ -144,7 +144,7 @@ export const googleCallback = async (req, res) => {
         userId: user._id
       },
       JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "7d" }
     );
 
     const refreshToken = jwt.sign(
@@ -216,7 +216,7 @@ export const registerUser = async (req, res) => {
         userId: newUser._id
       },
       JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "7d" }
     );
 
     const refreshToken = jwt.sign(
@@ -260,7 +260,8 @@ export const loginUser = async (req, res) => {
 
   try {
     // Find user in MongoDB
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -280,7 +281,7 @@ export const loginUser = async (req, res) => {
         userId: user._id
       },
       JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "7d" }
     );
 
     // Generate Refresh Token (7 days)
@@ -307,7 +308,9 @@ export const loginUser = async (req, res) => {
         name: user.name,
         userId: user._id,
         personalInfo: user.personalInfo,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        isPremium: user.isPremium || false,
+        freeInterviewsCount: user.freeInterviewsCount || 0
       }
     });
   } catch (error) {
@@ -341,7 +344,7 @@ export const refresh = async (req, res) => {
         userId: user._id
       },
       JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "7d" }
     );
 
     res.json({ accessToken });
@@ -385,7 +388,14 @@ export const getProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.json({ user });
+    res.json({
+      user: {
+        ...user.toObject(),
+        id: user._id,
+        isPremium: user.isPremium || false,
+        freeInterviewsCount: user.freeInterviewsCount || 0
+      }
+    });
   } catch (error) {
     console.error("Error getting profile:", error);
     res.status(500).json({ message: "Error getting profile", error: error.message });
@@ -471,7 +481,8 @@ export const sendOtp = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: cleanEmail });
 
     if (type === 'register' && user) {
       return res.status(400).json({ message: "User already exists" });
@@ -486,7 +497,7 @@ export const sendOtp = async (req, res) => {
 
     // Save to DB
     await Otp.create({
-      email: email.toLowerCase(),
+      email: cleanEmail,
       otp,
       expires: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
     });
@@ -517,8 +528,9 @@ export const verifyOtp = async (req, res) => {
   }
 
   try {
+    const cleanEmail = email.trim().toLowerCase();
     // Check latest OTP
-    const record = await Otp.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+    const record = await Otp.findOne({ email: cleanEmail }).sort({ createdAt: -1 });
 
     if (!record) {
       return res.status(400).json({ message: "OTP expired or invalid" });
@@ -549,8 +561,9 @@ export const resetPassword = async (req, res) => {
   }
 
   try {
+    const cleanEmail = email.trim().toLowerCase();
     // 1. Verify OTP again
-    const record = await Otp.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+    const record = await Otp.findOne({ email: cleanEmail }).sort({ createdAt: -1 });
 
     if (!record || record.otp !== parseInt(otp) || record.expires < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -561,7 +574,7 @@ export const resetPassword = async (req, res) => {
 
     // 3. Update User
     const user = await User.findOneAndUpdate(
-      { email: email.toLowerCase() },
+      { email: cleanEmail },
       { password: hashedPassword },
       { new: true }
     );
@@ -571,7 +584,7 @@ export const resetPassword = async (req, res) => {
     }
 
     // 4. Cleanup OTPs
-    await Otp.deleteMany({ email: email.toLowerCase() });
+    await Otp.deleteMany({ email: cleanEmail });
 
     res.json({ success: true, message: "Password reset successfully" });
 

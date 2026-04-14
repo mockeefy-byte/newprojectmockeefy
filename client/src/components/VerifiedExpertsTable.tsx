@@ -194,11 +194,16 @@ const VerifiedExpertsTable = () => {
               <div key={expert._id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all p-6 flex flex-col justify-between group">
                 <div>
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-lg line-clamp-1" title={expert.personalInformation.userName}>
-                        {expert.personalInformation.userName}
-                      </h3>
-                      <p className="text-sm text-gray-500 font-medium line-clamp-1">{expert.professionalDetails.title}</p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-green-700 font-black text-sm uppercase shrink-0">
+                        {expert.personalInformation.userName.substring(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-gray-900 text-lg line-clamp-1" title={expert.personalInformation.userName}>
+                          {expert.personalInformation.userName}
+                        </h3>
+                        <p className="text-sm text-gray-500 font-medium line-clamp-1">{expert.professionalDetails.title}</p>
+                      </div>
                     </div>
                     <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 shrink-0">
                       {expert.personalInformation.category || "General"}

@@ -64,12 +64,12 @@ const DashboardChats = () => {
                     >
                         <div className="flex items-start gap-4">
                             <div className="relative shrink-0">
-                                <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                                    {chat.avatar ? (
-                                        <img src={getProfileImageUrl(chat.avatar)} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="text-sm font-bold text-gray-500">{chat.name.charAt(0)}</span>
-                                    )}
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-black text-xs uppercase shrink-0 shadow-sm overflow-hidden">
+                                     {chat.avatar && !chat.avatar.includes('default-avatar.png') ? (
+                                         <img src={getProfileImageUrl(chat.avatar)} className="w-full h-full object-cover" />
+                                     ) : (
+                                         <span>{(chat.name || "CH").trim().substring(0, 2).toUpperCase()}</span>
+                                     )}
                                 </div>
                                 {chat.online && (
                                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>

@@ -149,12 +149,12 @@ const DashboardSessions = () => {
                                 <tr key={session._id || session.id} className="group hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
-                                                {session.candidateDetails?.profileImage ? (
-                                                    <img src={getProfileImageUrl(session.candidateDetails.profileImage)} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-xs font-bold text-gray-500">{session.candidateName?.charAt(0) || "C"}</span>
-                                                )}
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm uppercase shrink-0 shadow-sm">
+                                                 {session.candidateDetails?.profileImage && !session.candidateDetails.profileImage.includes('default-avatar.png') ? (
+                                                     <img src={getProfileImageUrl(session.candidateDetails.profileImage)} className="w-full h-full object-cover rounded-xl" />
+                                                 ) : (
+                                                     <span>{(session.candidateName || "CA").trim().substring(0, 2).toUpperCase()}</span>
+                                                 )}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-gray-900">{session.candidateName || "Unknown Candidate"}</p>

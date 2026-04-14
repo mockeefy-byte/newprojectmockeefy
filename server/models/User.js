@@ -127,6 +127,19 @@ const userSchema = new mongoose.Schema({
     min: 0
   },
 
+  /* ----------------- Premium Fields ------------------ */
+  isPremium: {
+    type: Boolean,
+    default: false
+  },
+  premiumExpiry: {
+    type: Date
+  },
+  freeInterviewsCount: {
+    type: Number,
+    default: 0
+  },
+
   createdAt: {
     type: Date,
     default: Date.now

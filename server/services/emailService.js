@@ -6,11 +6,10 @@ const transporterConfig = {
     port: Number(process.env.SMTP_PORT) || 465,
     secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
     },
     maxConnections: 5,
-    // Increase timeout for production stability
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
@@ -43,7 +42,7 @@ export const sendEmail = async ({ to, subject, html }) => {
         // Use a verified domain if available, otherwise fallback to nice format or let Resend handle it if onboarding
         // Note: For Resend, if you don't have a domain, you MUST send from "onboarding@resend.dev" to yourself.
         // In production with a domain, use "noreply@yourdomain.com".
-        const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+        const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER;
 
         const mailOptions = {
             from: `"Mockeefy Support" <${fromAddress}>`,

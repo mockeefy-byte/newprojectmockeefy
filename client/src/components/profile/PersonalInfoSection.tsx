@@ -56,7 +56,7 @@ export default function PersonalInfoSection({ profileData, onUpdate }: PersonalI
         }
         try {
             setGeneratingBio(true);
-            const res = await axios.get("/api/user/resume", { headers: { userid: userId } });
+            const res = await axios.get("/api/user/profile/resume", { headers: { userid: userId } });
             const resumeData = res.data?.data;
             
             let role = "Professional";

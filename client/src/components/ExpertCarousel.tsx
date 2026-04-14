@@ -28,11 +28,15 @@ interface ExpertCardProps {
 }
 
 export function ExpertCard({ expert }: ExpertCardProps) {
+  const navigate = useNavigate();
   return (
-    <div className="w-[320px] relative bg-gradient-to-br from-white via-white to-slate-50/30 border border-slate-200/60 rounded-[20px] p-6 flex flex-col shrink-0 snap-center hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:border-blue-400 hover:ring-1 hover:ring-blue-400 hover:-translate-y-1 transition-all duration-300 cursor-pointer group overflow-hidden">
+    <div 
+      className="w-[320px] relative bg-gradient-to-br from-white via-white to-blue-50/30 border border-slate-200/60 rounded-[24px] p-6 flex flex-col shrink-0 snap-center hover:shadow-[0_20px_50px_rgba(0,79,203,0.1)] hover:border-blue-400/30 hover:-translate-y-2 transition-all duration-300 cursor-pointer group overflow-hidden"
+      onClick={() => navigate('/book-session', { state: { expertId: expert.id, profile: expert } })}
+    >
       
       {/* Subtle animated gradient overlay */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+      <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
       
       {/* Floating Badge */}
       {expert.badge && (
@@ -42,99 +46,92 @@ export function ExpertCard({ expert }: ExpertCardProps) {
       )}
 
       {/* Header Row */}
-      <div className="flex justify-between items-start mb-3 relative z-10">
-        <div className="pr-24">
-          <h3 className="text-[17px] font-bold text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-600 transition-colors">{expert.name}</h3>
+      <div className="flex justify-between items-start mb-5 relative z-10">
+        <div className="pr-16">
+          <h3 className="text-[19px] font-black text-slate-900 mb-1.5 tracking-tight group-hover:text-blue-700 transition-colors leading-tight truncate">{expert.name}</h3>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Clock className="w-[14px] h-[14px]" />
-            <span className="text-[13px] font-medium">{expert.timeAgo}</span>
+            <span className="text-[12px] font-bold uppercase tracking-wider">{expert.timeAgo.replace('Recently active', 'Active')}</span>
           </div>
         </div>
         
-        {/* Right Actions / Avatar */}
-        <div className="flex items-center gap-2 absolute right-0 top-0">
-          <button className="w-10 h-10 rounded-[12px] border border-slate-200/60 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all bg-white shadow-sm hover:shadow-md hover:scale-110">
-            <Bookmark className="w-[18px] h-[18px]" strokeWidth={2} />
-          </button>
-          {expert.avatarUrl ? (
-            <img src={expert.avatarUrl} alt={expert.name} className="w-10 h-10 rounded-[12px] object-cover border border-slate-200/60 shadow-sm ring-2 ring-white" />
+        <div className="relative shrink-0">
+          {(expert.avatarUrl && !expert.avatarUrl.includes("default-avatar.png")) ? (
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100">
+              <img src={expert.avatarUrl} alt={expert.name} className="w-full h-full object-cover" />
+            </div>
           ) : (
-            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white font-bold text-[16px] shadow-md ring-2 ring-white" style={{ background: expert.avatarColor || '#8b5cf6' }}>
-              {expert.initial || expert.name.charAt(0)}
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 text-blue-700 font-black text-lg border-2 border-white ring-1 ring-slate-100 uppercase">
+              {expert.name.substring(0, 2)}
             </div>
           )}
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-sm ring-1 ring-emerald-100"></div>
         </div>
       </div>
 
       {/* Role */}
-      <div className="mb-4 mt-2 relative z-10">
-        <p className="text-[14px] text-slate-600 font-medium leading-relaxed min-h-[40px] pr-2 line-clamp-2">
+      <div className="mb-5 relative z-10">
+        <p className="text-[14px] text-slate-700 font-bold leading-snug line-clamp-2">
           {expert.role}
         </p>
       </div>
 
       {/* Rating & Category */}
-      <div className="flex items-center gap-2.5 mb-4 relative z-10">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-amber-50 to-orange-50/50 rounded-lg border border-amber-200/60 shadow-sm ring-1 ring-amber-100/50">
-          <Star className="w-[14px] h-[14px] fill-amber-400 text-amber-500 drop-shadow-sm" />
-          <span className="text-[13px] font-bold text-amber-900">{expert.rating !== "New" ? expert.rating : "New"}</span>
+      <div className="flex items-center gap-2 mb-6 relative z-10">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-xl border border-amber-200/50">
+          <Star className="w-[14px] h-[14px] fill-amber-400 text-amber-500 dropdown-shadow-sm" />
+          <span className="text-[13px] font-black text-amber-900">{expert.rating !== "New" ? expert.rating : "New"}</span>
           {expert.reviewsCount !== undefined && expert.reviewsCount > 0 && (
-             <span className="text-[11px] font-semibold text-slate-500 ml-0.5 whitespace-nowrap">({expert.reviewsCount} Reviews)</span>
+             <span className="text-[10px] font-bold text-amber-600/60 ml-0.5 whitespace-nowrap">({expert.reviewsCount})</span>
           )}
         </div>
-        <div className="px-3 py-1.5 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-lg border border-slate-200/60 shadow-sm ring-1 ring-slate-100">
-          <span className="text-[13px] font-bold text-slate-700">{expert.category}</span>
+        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200/50 rounded-xl">
+          <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{expert.category}</span>
         </div>
       </div>
 
-      {/* Experience & Location */}
-      <div className="flex items-center gap-5 mb-5 relative z-10">
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <Briefcase className="w-[15px] h-[15px]" />
-          <span className="text-[13px] font-semibold text-slate-600">{expert.experience}</span>
+      {/* Meta Stats Row */}
+      <div className="grid grid-cols-2 gap-3 mb-6 relative z-10">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-slate-50/50 border border-slate-100">
+          <Briefcase className="w-[15px] h-[15px] text-slate-400" />
+          <div className="min-w-0">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Exp.</p>
+            <p className="text-[12px] font-bold text-slate-700 truncate leading-none">{expert.experience}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <MapPin className="w-[15px] h-[15px]" />
-          <span className="text-[13px] font-semibold text-slate-600">{expert.location}</span>
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-slate-50/50 border border-slate-100">
+          <MapPin className="w-[15px] h-[15px] text-slate-400" />
+          <div className="min-w-0">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Loc.</p>
+            <p className="text-[12px] font-bold text-slate-700 truncate leading-none">{expert.location.split(',')[0]}</p>
+          </div>
         </div>
       </div>
-
-      {/* Divider */}
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-4 relative z-10"></div>
 
       {/* Availability */}
       {expert.availableToday && (
-        <div className="mb-3 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-teal-50/50 rounded-lg border border-emerald-200/60 shadow-sm ring-1 ring-emerald-100/50">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></div>
-            <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Available Today</span>
+        <div className="mb-6 relative z-10">
+          <div className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50/60 border border-emerald-100 rounded-xl w-full">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></div>
+            <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest whitespace-nowrap">Available Today</span>
           </div>
         </div>
       )}
 
-      {/* Skills */}
-      <div className="flex flex-wrap gap-2 mb-6 min-h-[56px] content-start relative z-10">
-        {expert.skills.map(s => (
-          <span key={s} className="px-3 py-1.5 bg-gradient-to-br from-slate-50 to-slate-100/50 text-slate-700 text-[12px] font-semibold rounded-lg border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all">
-            {s}
-          </span>
-        ))}
-        {expert.moreSkillsCount && (
-          <span className="px-2.5 py-1.5 text-slate-500 text-[12px] font-semibold flex items-center">
-            +{expert.moreSkillsCount} more
-          </span>
-        )}
-      </div>
-
       {/* Footer */}
-      <div className="mt-auto flex items-end justify-between relative z-10">
-        <div>
-          <p className="text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest">Session Fee</p>
-          <div className="text-[22px] font-black text-slate-900 tracking-tight leading-none bg-gradient-to-br from-slate-900 to-slate-700 bg-clip-text">₹{expert.fee}</div>
+      <div className="mt-auto pt-5 border-t border-slate-100/50 relative z-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-widest leading-none">Starting From</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[24px] font-black text-slate-900 leading-none tracking-tight">₹{expert.fee}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">/ session</span>
+            </div>
+          </div>
+          <button className="flex items-center gap-1.5 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[14px] rounded-2xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-105 active:scale-95">
+            Book <ChevronRight className="w-[16px] h-[16px]" strokeWidth={3} />
+          </button>
         </div>
-        <button className="flex items-center gap-1.5 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-[13px] rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:scale-105 ring-1 ring-blue-600/50">
-          Book Now <ChevronRight className="w-[14px] h-[14px]" strokeWidth={2.5} />
-        </button>
       </div>
     </div>
   );
@@ -199,7 +196,7 @@ export function ExpertCarousel() {
               availableToday: true, 
               skills: allSkills.slice(0, 3), // Show max 3 tags
               moreSkillsCount: allSkills.length > 3 ? allSkills.length - 3 : undefined,
-              fee: expert.price || expert.fee || 350,
+              fee: expert.price || expert.fee || 99,
               avatarUrl: getProfileImageUrl(expert.profileImage) || undefined,
               avatarColor: "#8b5cf6",
               initial: (expert.personalInformation?.userName?.charAt(0) || "M").toUpperCase(),
