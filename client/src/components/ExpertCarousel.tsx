@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Clock, Bookmark, Star, Briefcase, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../lib/axios';
 import { getProfileImageUrl } from "../lib/imageUtils";
 
@@ -62,7 +63,7 @@ export function ExpertCard({ expert }: ExpertCardProps) {
             </div>
           ) : (
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 text-blue-700 font-black text-lg border-2 border-white ring-1 ring-slate-100 uppercase">
-              {expert.name.substring(0, 2)}
+              {(expert.name || 'E').trim().charAt(0).toUpperCase()}
             </div>
           )}
           <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-sm ring-1 ring-emerald-100"></div>
