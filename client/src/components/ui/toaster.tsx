@@ -1,0 +1,47 @@
+import type { ReactNode } from "react"
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "./toast"
+
+function useToast() {
+  return { toasts: [] as any[] }
+}
+
+export function Toaster() {
+  const { toasts } = useToast()
+  return (
+    <ToastProvider>
+      {toasts.map(function ({
+        id,
+        title,
+        description,
+        action,
+        ...props
+      }: {
+        id: string | number
+        title?: ReactNode
+        description?: ReactNode
+        action?: ReactNode
+      } & Record<string, any>) {
+        return (
+          <Toast key={id} {...props}>
+            <div className="grid gap-1">
+              {title && <ToastTitle>{title}</ToastTitle>}
+              {description && (
+                <ToastDescription>{description}</ToastDescription>
+              )}
+            </div>
+            {action}
+            <ToastClose />
+          </Toast>
+        )
+      })}
+      <ToastViewport />
+    </ToastProvider>
+  )
+}

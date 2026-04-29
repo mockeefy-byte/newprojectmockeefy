@@ -1,0 +1,76 @@
+========== DEBUG START ==========
+Found 10 sessions
+
+--- SESSION ---
+ID: test-session-001
+ExpertID (Raw): kohsanar20@gmail.com
+FOUND by email -> userId
+Name: saran
+Role: undefined
+Image: undefined
+
+--- SESSION ---
+ID: test-session-kohsanar-extra
+ExpertID (Raw): kohsanar20@gmail.com
+FOUND by email -> userId
+Name: saran
+Role: undefined
+Image: undefined
+
+--- SESSION ---
+ID: session-1766164584462-mvea1ai87
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766201572216-mh26jk9o1
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766203621249-zyra36894
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766205831348-n7dl2qs50
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766207841872-6rs3f9uxd
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766225402162-x6poa9g96
+ExpertID (Raw): 68d8c822c2cec925ed74e688
+FOUND by userId (ObjectId)
+Name: Bala
+Role: undefined
+Image: http://interviewmock.onrender.com/uploads/profileImages/1766160945129-794889504.jpeg
+
+--- SESSION ---
+ID: session-1766301581101-yv5d8s7f8
+ExpertID (Raw): 6947889400ab2e2daf21b095
+!!! EXPERT NOT FOUND !!!
+
+--- SESSION ---
+ID: session-1766314057895-8jritgoll
+ExpertID (Raw): 6947889400ab2e2daf21b095
+!!! EXPERT NOT FOUND !!!

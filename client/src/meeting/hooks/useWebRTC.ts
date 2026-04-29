@@ -1,0 +1,413 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import axios from '../../lib/axios';
+
+// Default STUN-only fallback (TURN required for cross-network in production)
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+];
+
+// 720p preferred constraints for video quality
+const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+    width: { ideal: 1280, min: 640 },
+    height: { ideal: 720, min: 360 },
+    frameRate: { ideal: 24, max: 30 },
+};
+
+export function useWebRTC(onIceCandidateSend: (candidate: RTCIceCandidate) => void) {
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const [isMicOn, setIsMicOn] = useState(true);
+    const [isCameraOn, setIsCameraOn] = useState(true);
+    const [connectionState, setConnectionState] = useState<RTCIceConnectionState>('new');
+    const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
+    const [isIceLoaded, setIsIceLoaded] = useState(false);
+
+    const pcRef = useRef<RTCPeerConnection | null>(null);
+    const candidateQueue = useRef<RTCIceCandidateInit[]>([]);
+
+    // 0. Fetch TURN Credentials from backend (Render). Long timeout for cold start; TURN required for production video.
+    useEffect(() => {
+        const fetchIceServers = async () => {
+            const isProd = import.meta.env.PROD;
+            const timeout = isProd ? 25000 : 10000; // Render free tier can take 30–60s to wake
+            try {
+                const res = await axios.get('/api/meetings/turn-credentials', { timeout });
+                if (Array.isArray(res.data) && res.data.length > 0) {
+                    let stunCount = 0;
+                    let turnCount = 0;
+                    res.data.forEach((s: RTCIceServer) => {
+                        const urls = Array.isArray(s.urls) ? s.urls : (s.urls ? [s.urls] : []);
+                        urls.forEach((u: string) => u.startsWith('turn:') ? turnCount++ : stunCount++);
+                    });
+                    const hasTurn = turnCount > 0;
+                    console.log("[WebRTC] ICE servers:", res.data.length, "entries →", stunCount, "STUN,", turnCount, "TURN.");
+                    if (!hasTurn && import.meta.env.PROD) {
+                        console.warn("[WebRTC] No TURN server. Connection will likely fail from mobile or different WiFi. Add TURN_HOST, TURN_USERNAME, TURN_CREDENTIAL on Render.");
+                    }
+                    setIceServers(res.data);
+                } else {
+                    console.warn("[WebRTC] Invalid TURN format, using defaults");
+                    setIceServers(DEFAULT_ICE_SERVERS);
+                }
+            } catch (error) {
+                console.error("[WebRTC] Failed to fetch ICE servers, using defaults", error);
+                setIceServers(DEFAULT_ICE_SERVERS);
+            } finally {
+                setIsIceLoaded(true);
+            }
+        };
+        fetchIceServers();
+    }, []);
+
+    // 1. Initialize Local Media (720p, HTTPS required in production)
+    const initLocalMedia = useCallback(async () => {
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+            console.error("[WebRTC] Media requires a secure context (HTTPS or localhost). Current:", window.location.protocol);
+            return null;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: VIDEO_CONSTRAINTS,
+                audio: { echoCancellation: true, noiseSuppression: true },
+            });
+            setLocalStream(stream);
+            setIsMicOn(true);
+            setIsCameraOn(true);
+            stream.getAudioTracks().forEach(t => { t.enabled = true; });
+            stream.getVideoTracks().forEach(t => { t.enabled = true; });
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack?.getSettings()) {
+                const { width, height } = videoTrack.getSettings();
+                console.log("[WebRTC] Local media started:", width, "x", height);
+            }
+            return stream;
+        } catch (error) {
+            console.error("[WebRTC] Error accessing media devices:", error);
+            return null;
+        }
+    }, []);
+
+    // 2. Initialize PeerConnection (Singleton)
+    const getOrCreatePeerConnection = useCallback(() => {
+        if (!isIceLoaded) {
+            console.warn("[WebRTC] Skipping PC creation - ICE servers not loaded");
+            return null;
+        }
+
+        if (pcRef.current && pcRef.current.signalingState !== 'closed') {
+            return pcRef.current;
+        }
+
+        console.log("[WebRTC] Creating RTCPeerConnection with servers", iceServers);
+
+        const pc = new RTCPeerConnection({
+            iceServers: iceServers,
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            iceCandidatePoolSize: 10
+        });
+
+        // ICE Candidates
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                onIceCandidateSend(event.candidate);
+            }
+        };
+
+        // Remote Track Handling
+        pc.ontrack = (event) => {
+            if (event.streams && event.streams[0]) {
+                setRemoteStream(event.streams[0]);
+            }
+        };
+
+        // Connection state logging (for production debugging)
+        pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState;
+            setConnectionState(state);
+            if (state === 'connected' || state === 'completed') {
+                console.log('[WebRTC] ICE connected – media should be flowing');
+            } else if (state === 'failed') {
+                console.error('[WebRTC] ICE failed – check TURN server and firewall');
+            } else if (state === 'disconnected') {
+                console.warn('[WebRTC] ICE disconnected – may reconnect');
+            } else {
+                console.log('[WebRTC] ICE state:', state);
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            const state = pc.connectionState;
+            console.log('[WebRTC] Connection state:', state);
+            if (state === 'failed') {
+                console.error('[WebRTC] PeerConnection failed');
+            }
+        };
+
+        pcRef.current = pc;
+        return pc;
+    }, [isIceLoaded, iceServers, onIceCandidateSend]);
+
+    // Helper: Add Tracks to PC
+    const addLocalTracksToPC = useCallback((pc: RTCPeerConnection, stream: MediaStream) => {
+        stream.getTracks().forEach((track) => {
+            // Check if track already exists to avoid duplication
+            const senders = pc.getSenders();
+            const exists = senders.some(s => s.track === track);
+            if (!exists) {
+                pc.addTrack(track, stream);
+            }
+        });
+    }, []);
+
+    // 3. Expert: Create Offer
+    const createOffer = useCallback(async () => {
+        const pc = getOrCreatePeerConnection();
+        if (!pc) return null;
+
+        // Reliability: Create Data Channel
+        const dc = pc.createDataChannel("chat");
+        dc.onopen = () => { };
+
+        if (localStream) {
+            addLocalTracksToPC(pc, localStream);
+        } else {
+            console.warn("Creating offer with NO local stream (Receive Only)");
+            pc.addTransceiver('video', { direction: 'recvonly' });
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+        }
+
+        try {
+            const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true,
+                iceRestart: true
+            });
+
+            await pc.setLocalDescription(offer);
+
+            // Wait for initial ICE gathering (up to 3s) so remote gets candidates sooner – helps across networks
+            if (pc.iceGatheringState !== 'complete') {
+                await new Promise<void>((resolve) => {
+                    const done = () => {
+                        pc.removeEventListener('icegatheringstatechange', onState);
+                        clearTimeout(t);
+                        resolve();
+                    };
+                    const onState = () => { if (pc.iceGatheringState === 'complete') done(); };
+                    const t = setTimeout(done, 3000);
+                    pc.addEventListener('icegatheringstatechange', onState);
+                });
+            }
+            return offer;
+        } catch (error) {
+            console.error("Error creating offer:", error);
+            return null;
+        }
+    }, [localStream, getOrCreatePeerConnection, addLocalTracksToPC]);
+
+    // 4. Candidate: Handle Offer & Create Answer
+    const handleReceivedOffer = useCallback(async (offer: RTCSessionDescriptionInit) => {
+        const pc = getOrCreatePeerConnection();
+        if (!pc) return null;
+
+        if (localStream) {
+            addLocalTracksToPC(pc, localStream);
+        } else {
+            console.warn("Handling offer with NO local stream - adding recvonly transceivers");
+            pc.addTransceiver('video', { direction: 'recvonly' });
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+        }
+
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+            // Process Queued Candidates
+            while (candidateQueue.current.length > 0) {
+                const c = candidateQueue.current.shift();
+                if (c) await pc.addIceCandidate(new RTCIceCandidate(c));
+            }
+
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            return answer;
+        } catch (error) {
+            console.error("Error handling offer:", error);
+            return null;
+        }
+    }, [localStream, getOrCreatePeerConnection, addLocalTracksToPC]);
+
+    // 5. Expert: Handle Answer
+    const handleReceivedAnswer = useCallback(async (answer: RTCSessionDescriptionInit) => {
+        const pc = pcRef.current;
+        if (!pc) return;
+
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+            // Process Queued Candidates (Rare for answer side but good practice)
+            while (candidateQueue.current.length > 0) {
+                const c = candidateQueue.current.shift();
+                if (c) await pc.addIceCandidate(new RTCIceCandidate(c));
+            }
+        } catch (error) {
+            console.error("Error handling answer:", error);
+        }
+    }, []);
+
+    // 6. Handle ICE Candidate
+    const handleReceivedIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
+        const pc = pcRef.current;
+        if (!pc) {
+            // Queue if PC not created yet
+            candidateQueue.current.push(candidate);
+            return;
+        }
+
+        try {
+            if (pc.remoteDescription) {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } else {
+                candidateQueue.current.push(candidate);
+            }
+        } catch (error) {
+            console.error("Error adding ICE candidate:", error);
+        }
+    }, []);
+
+    // 7. Toggle Logic (Enabled/Disabled)
+    const toggleMic = useCallback(() => {
+        if (localStream) {
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = !audioTrack.enabled;
+                setIsMicOn(audioTrack.enabled);
+            }
+        }
+    }, [localStream]);
+
+    const toggleCamera = useCallback(() => {
+        if (localStream) {
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                setIsCameraOn(videoTrack.enabled);
+            }
+        }
+    }, [localStream]);
+
+    // Track stream in ref for cleanup access
+    const localStreamRef = useRef<MediaStream | null>(null);
+
+    useEffect(() => {
+        localStreamRef.current = localStream;
+    }, [localStream]);
+
+    const cleanup = useCallback(() => {
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+            setLocalStream(null);
+        }
+        if (pcRef.current) {
+            pcRef.current.close();
+            pcRef.current = null;
+        }
+        setRemoteStream(null);
+        // Clear candidates
+        candidateQueue.current = [];
+    }, []);
+
+    const resetPeerConnection = useCallback(() => {
+        if (pcRef.current) {
+            pcRef.current.close();
+            pcRef.current = null;
+        }
+        setRemoteStream(null);
+        candidateQueue.current = [];
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            cleanup();
+        };
+    }, [cleanup]);
+
+    const stopScreenShare = useCallback(async () => {
+        try {
+            const cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: VIDEO_CONSTRAINTS,
+                audio: true,
+            });
+            const videoTrack = cameraStream.getVideoTracks()[0];
+
+            if (localStream && pcRef.current) {
+                const videoSender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+                if (videoSender) {
+                    await videoSender.replaceTrack(videoTrack);
+                }
+
+                // Restore local stream
+                setLocalStream(cameraStream);
+
+                // Ensure mic/camera state is respected
+                if (!isMicOn) cameraStream.getAudioTracks().forEach(t => t.enabled = false);
+                if (!isCameraOn) cameraStream.getVideoTracks().forEach(t => t.enabled = false);
+            }
+        } catch (error) {
+            console.error("Error stopping screen share:", error);
+        }
+    }, [localStream, isMicOn, isCameraOn]);
+
+    // 8. Screen Share Logic
+    const startScreenShare = useCallback(async () => {
+        try {
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 } },
+            });
+            const screenTrack = screenStream.getVideoTracks()[0];
+
+            if (localStream && pcRef.current) {
+                const videoSender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+                if (videoSender) {
+                    await videoSender.replaceTrack(screenTrack);
+                }
+
+                // Update local stream to show screen share locally
+                const newStream = new MediaStream([screenTrack, ...localStream.getAudioTracks()]);
+                setLocalStream(newStream);
+
+                // Handle screen share stop (user clicks browser "Stop Sharing")
+                screenTrack.onended = () => {
+                    stopScreenShare();
+                };
+            }
+            return screenStream;
+        } catch (error) {
+            console.error("Error starting screen share:", error);
+            return null;
+        }
+    }, [localStream, stopScreenShare]);
+
+    return {
+        localStream,
+        remoteStream,
+        isMicOn,
+        isCameraOn,
+        initLocalMedia,
+        createOffer,
+        handleReceivedOffer,
+        handleReceivedAnswer,
+        handleReceivedIceCandidate,
+        toggleMic,
+        toggleCamera,
+        startScreenShare,
+        stopScreenShare,
+        cleanup,
+        resetPeerConnection,
+        connectionState
+    };
+}
